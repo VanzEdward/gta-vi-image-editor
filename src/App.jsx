@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import ImageEditor from "@unlayer/react-image-editor";
 import {
   playClickSound,
@@ -74,19 +74,44 @@ const PRESET_SUSPECTS = [
 export default function App() {
   const editorRef = useRef(null);
   const posterCanvasRef = useRef(null);
+  const posterSectionRef = useRef(null);
 
-  // Active suspect data
-  const [suspect, setSuspect] = useState(PRESET_SUSPECTS[0]);
-  const [currentImage, setCurrentImage] = useState(PRESET_SUSPECTS[0].url);
-  const [savedImage, setSavedImage] = useState(null);
+  // Initialize from URL search params if present (shareable links support)
+  const getInitialSuspect = () => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const presetId = params.get("preset");
+      const matched = PRESET_SUSPECTS.find((p) => p.id === presetId);
+      const base = matched || PRESET_SUSPECTS[0];
+
+      return {
+        id: base.id,
+        name: params.get("name") || base.name,
+        alias: params.get("alias") || base.alias,
+        url: params.get("img") || base.url,
+        charge: params.get("charge") || base.charge,
+        bounty: Number(params.get("bounty")) || base.bounty,
+        stars: Number(params.get("stars")) || base.stars,
+        location: params.get("location") || base.location,
+        dangerLevel: params.get("danger") || base.dangerLevel,
+        bookingNo: params.get("docket") || base.bookingNo,
+      };
+    } catch {
+      return PRESET_SUSPECTS[0];
+    }
+  };
+
+  // State
+  const [suspect, setSuspect] = useState(getInitialSuspect);
+  const [currentImage, setCurrentImage] = useState(suspect.url);
   const [finalPosterUrl, setFinalPosterUrl] = useState(null);
-  const [isGeneratingPoster, setIsGeneratingPoster] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
 
   // Audio & Visual Effects
   const [musicPlaying, setMusicPlaying] = useState(false);
-  const [scanlinesActive, setScanlinesActive] = useState(true);
+  const [scanlinesActive, setScanlinesActive] = useState(false);
   const [currentTime, setCurrentTime] = useState("");
-  const [copiedNotification, setCopiedNotification] = useState(false);
 
   // Live Vice City Digital Clock (EDT / UTC-4)
   useEffect(() => {
@@ -106,16 +131,20 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
-  // Handle preset selection
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  // Preset Selection
   const selectPreset = (preset) => {
     playClickSound();
     setSuspect(preset);
     setCurrentImage(preset.url);
-    setSavedImage(null);
     setFinalPosterUrl(null);
   };
 
-  // Handle custom photo upload
+  // Custom Suspect Upload
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -129,14 +158,14 @@ export default function App() {
           alias: "UNKNOWN SUBJECT",
           bookingNo: `VCPD-2026-${Math.floor(1000 + Math.random() * 9000)}X`,
         }));
-        setSavedImage(null);
         setFinalPosterUrl(null);
+        showToast("Suspect photo loaded into editor!");
       };
       reader.readAsDataURL(file);
     }
   };
 
-  // Handle Wanted Star click
+  // Wanted Star Rating Click
   const handleStarClick = (rating) => {
     playStarSound(rating);
     const bountyScale = [10000, 50000, 150000, 500000, 1000000];
@@ -156,7 +185,7 @@ export default function App() {
     }));
   };
 
-  // Audio Toggle
+  // Synthesizer Radio Toggle
   const handleToggleMusic = () => {
     playClickSound();
     toggleSynthwaveMusic((playing) => {
@@ -164,162 +193,154 @@ export default function App() {
     });
   };
 
-  // Image Editor Save Callback
-  const handleSave = ({ dataUrl }) => {
-    playShutterSound();
-    setSavedImage(dataUrl);
-    generateOfficialWantedPoster(dataUrl);
-  };
-
-  // Generate Official VCPD Wanted Poster on Canvas
-  const generateOfficialWantedPoster = (editedImgDataUrl) => {
-    setIsGeneratingPoster(true);
+  // Render Wanted Poster on Canvas
+  const renderPosterCanvas = useCallback((sourceImageUrl) => {
+    setIsGenerating(true);
     const canvas = posterCanvasRef.current || document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
-    // Poster Dimensions (HD Ratio: 1000 x 1400)
+    // HD 1000 x 1400 Ratio
     canvas.width = 1000;
     canvas.height = 1400;
 
-    const suspectImg = new Image();
-    suspectImg.crossOrigin = "anonymous";
-    suspectImg.onload = () => {
-      // 1. Background Paper / HUD Base
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      // 1. Dark Background with subtle Vice gradient
       const bgGrad = ctx.createLinearGradient(0, 0, 0, 1400);
-      bgGrad.addColorStop(0, "#0a0e1a");
-      bgGrad.addColorStop(0.5, "#070a12");
-      bgGrad.addColorStop(1, "#030509");
+      bgGrad.addColorStop(0, "#090d16");
+      bgGrad.addColorStop(0.5, "#06080e");
+      bgGrad.addColorStop(1, "#020408");
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, 1000, 1400);
 
-      // Border & Neon Trim
+      // Neon Outlines
       ctx.strokeStyle = "#ff007a";
-      ctx.lineWidth = 8;
+      ctx.lineWidth = 6;
       ctx.strokeRect(16, 16, 968, 1368);
 
       ctx.strokeStyle = "#00f0ff";
       ctx.lineWidth = 2;
       ctx.strokeRect(26, 26, 948, 1348);
 
-      // 2. Header Top Banner: State of Leonida
-      ctx.fillStyle = "rgba(225, 29, 72, 0.2)";
-      ctx.fillRect(28, 28, 944, 90);
+      // 2. Top Header Bar: State of Leonida
+      ctx.fillStyle = "rgba(225, 29, 72, 0.25)";
+      ctx.fillRect(28, 28, 944, 95);
 
       ctx.fillStyle = "#ffffff";
       ctx.font = "bold 20px 'Chakra Petch', monospace";
       ctx.textAlign = "center";
-      ctx.fillText("STATE OF LEONIDA • DEPARTMENT OF LAW ENFORCEMENT", 500, 62);
+      ctx.fillText("STATE OF LEONIDA • DEPARTMENT OF LAW ENFORCEMENT", 500, 64);
 
       ctx.fillStyle = "#38bdf8";
       ctx.font = "600 14px 'Chakra Petch', monospace";
-      ctx.fillText(`VCPD CENTRAL DISPATCH • DOCKET: ${suspect.bookingNo} • STATUS: ACTIVE WARRANT`, 500, 92);
+      ctx.fillText(`VCPD CENTRAL DISPATCH • DOCKET: ${suspect.bookingNo} • STATUS: ACTIVE WARRANT`, 500, 96);
 
-      // 3. Main Title: WANTED BY VCPD
+      // 3. Main Title
       ctx.fillStyle = "#ff007a";
-      ctx.font = "900 68px 'Outfit', sans-serif";
-      ctx.fillText("WANTED BY VCPD", 500, 190);
+      ctx.font = "900 66px 'Outfit', sans-serif";
+      ctx.fillText("WANTED BY VCPD", 500, 192);
 
-      // 4. Stars Rating Banner
+      // 4. Stars Banner
       ctx.fillStyle = "#fbbf24";
-      ctx.font = "36px sans-serif";
+      ctx.font = "38px sans-serif";
       const starsDisplay = "★".repeat(suspect.stars) + "☆".repeat(5 - suspect.stars);
-      ctx.fillText(starsDisplay, 500, 240);
+      ctx.fillText(starsDisplay, 500, 242);
 
-      // 5. Suspect Image Area with Height Ruler Grid
-      const photoX = 140;
-      const photoY = 265;
-      const photoW = 720;
-      const photoH = 500;
+      // 5. Suspect Photo Container with Height Ruler
+      const pX = 140;
+      const pY = 265;
+      const pW = 720;
+      const pH = 510;
 
-      // Draw photo container border
       ctx.fillStyle = "#000000";
-      ctx.fillRect(photoX, photoY, photoW, photoH);
+      ctx.fillRect(pX, pY, pW, pH);
 
-      // Draw user's edited image
-      ctx.drawImage(suspectImg, photoX, photoY, photoW, photoH);
+      // Draw edited photo
+      ctx.drawImage(img, pX, pY, pW, pH);
 
-      // Height Marker Lines on Left & Right
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
-      ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+      // Height Rulers on Left & Right
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
       ctx.font = "12px 'Chakra Petch', monospace";
       ctx.textAlign = "left";
 
       const heights = ["6'4\"", "6'2\"", "6'0\"", "5'10\"", "5'8\"", "5'6\""];
       heights.forEach((h, idx) => {
-        const lineY = photoY + 60 + idx * 65;
+        const lineY = pY + 65 + idx * 65;
         ctx.beginPath();
-        ctx.moveTo(photoX, lineY);
-        ctx.lineTo(photoX + 50, lineY);
+        ctx.moveTo(pX, lineY);
+        ctx.lineTo(pX + 50, lineY);
         ctx.stroke();
-        ctx.fillText(h, photoX + 10, lineY - 6);
+        ctx.fillText(h, pX + 10, lineY - 6);
 
         ctx.beginPath();
-        ctx.moveTo(photoX + photoW - 50, lineY);
-        ctx.lineTo(photoX + photoW, lineY);
+        ctx.moveTo(pX + pW - 50, lineY);
+        ctx.lineTo(pX + pW, lineY);
         ctx.stroke();
       });
 
       // Photo Frame Accent
       ctx.strokeStyle = "#00f0ff";
       ctx.lineWidth = 3;
-      ctx.strokeRect(photoX, photoY, photoW, photoH);
+      ctx.strokeRect(pX, pY, pW, pH);
 
-      // 6. Angled Warning Stamp: CAUTION / ARMED & DANGEROUS
+      // 6. Angled Warning Stamp
       ctx.save();
-      ctx.translate(photoX + 160, photoY + 110);
+      ctx.translate(pX + 160, pY + 110);
       ctx.rotate((-18 * Math.PI) / 180);
       ctx.strokeStyle = "#e11d48";
       ctx.lineWidth = 4;
-      ctx.strokeRect(-120, -28, 240, 56);
-      ctx.fillStyle = "rgba(225, 29, 72, 0.25)";
-      ctx.fillRect(-120, -28, 240, 56);
+      ctx.strokeRect(-125, -28, 250, 56);
+      ctx.fillStyle = "rgba(225, 29, 72, 0.28)";
+      ctx.fillRect(-125, -28, 250, 56);
       ctx.fillStyle = "#ff4d6d";
       ctx.font = "bold 20px 'Chakra Petch', monospace";
       ctx.textAlign = "center";
       ctx.fillText("ARMED & DANGEROUS", 0, 8);
       ctx.restore();
 
-      // 7. Suspect Info Card
+      // 7. Suspect Dossier Details
       ctx.textAlign = "center";
 
       // Suspect Name
       ctx.fillStyle = "#ffffff";
       ctx.font = "900 44px 'Outfit', sans-serif";
-      ctx.fillText(suspect.name.toUpperCase(), 500, 825);
+      ctx.fillText(suspect.name.toUpperCase(), 500, 835);
 
       // Alias
       ctx.fillStyle = "#38bdf8";
       ctx.font = "bold 22px 'Chakra Petch', monospace";
-      ctx.fillText(`AKA: "${suspect.alias.toUpperCase()}"`, 500, 865);
+      ctx.fillText(`AKA: "${suspect.alias.toUpperCase()}"`, 500, 875);
 
       // Divider Line
       ctx.strokeStyle = "rgba(255, 0, 122, 0.4)";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(140, 890);
-      ctx.lineTo(860, 890);
+      ctx.moveTo(140, 900);
+      ctx.lineTo(860, 900);
       ctx.stroke();
 
-      // Bounty Box (Glowing Gold)
+      // Bounty Box
       ctx.fillStyle = "rgba(251, 191, 36, 0.12)";
-      ctx.fillRect(140, 915, 720, 100);
+      ctx.fillRect(140, 925, 720, 100);
       ctx.strokeStyle = "#fbbf24";
       ctx.lineWidth = 2;
-      ctx.strokeRect(140, 915, 720, 100);
+      ctx.strokeRect(140, 925, 720, 100);
 
       ctx.fillStyle = "#fbbf24";
       ctx.font = "700 18px 'Chakra Petch', monospace";
-      ctx.fillText("OFFICIAL VCPD CASH REWARD / BOUNTY", 500, 948);
+      ctx.fillText("OFFICIAL VCPD CASH REWARD / BOUNTY", 500, 958);
 
       ctx.fillStyle = "#ffffff";
       ctx.font = "900 48px 'Outfit', sans-serif";
-      ctx.fillText(`$${suspect.bounty.toLocaleString()}`, 500, 998);
+      ctx.fillText(`$${suspect.bounty.toLocaleString()}`, 500, 1008);
 
-      // Rap Sheet Docket Grid
-      const gridY = 1050;
+      // Rap Sheet Details Grid
+      const gridY = 1060;
       ctx.textAlign = "left";
 
-      // Column 1: CHARGES
+      // Charges
       ctx.fillStyle = "#94a3b8";
       ctx.font = "700 15px 'Chakra Petch', monospace";
       ctx.fillText("OUTSTANDING CHARGES / WARRANTS:", 140, gridY);
@@ -328,7 +349,7 @@ export default function App() {
       ctx.font = "600 20px 'Outfit', sans-serif";
       ctx.fillText(suspect.charge, 140, gridY + 30);
 
-      // Column 1: LAST SEEN LOCATION
+      // Location
       ctx.fillStyle = "#94a3b8";
       ctx.font = "700 15px 'Chakra Petch', monospace";
       ctx.fillText("LAST KNOWN SIGHTING / JURISDICTION:", 140, gridY + 80);
@@ -337,7 +358,7 @@ export default function App() {
       ctx.font = "600 20px 'Outfit', sans-serif";
       ctx.fillText(suspect.location, 140, gridY + 110);
 
-      // Column 1: THREAT ASSESSMENT
+      // Threat Level
       ctx.fillStyle = "#94a3b8";
       ctx.font = "700 15px 'Chakra Petch', monospace";
       ctx.fillText("THREAT LEVEL ASSESSMENT:", 140, gridY + 160);
@@ -346,14 +367,14 @@ export default function App() {
       ctx.font = "bold 20px 'Chakra Petch', monospace";
       ctx.fillText(suspect.dangerLevel, 140, gridY + 190);
 
-      // 8. Footer: Barcode & Dispatch Warning
-      ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
+      // 8. Footer Barcode & Tip Line
+      ctx.fillStyle = "rgba(15, 23, 42, 0.95)";
       ctx.fillRect(28, 1285, 944, 85);
 
       // Mock Barcode
       ctx.fillStyle = "#ffffff";
       for (let i = 0; i < 60; i++) {
-        const barW = (i % 3 === 0 ? 5 : (i % 2 === 0 ? 3 : 1));
+        const barW = i % 3 === 0 ? 5 : i % 2 === 0 ? 3 : 1;
         ctx.fillRect(80 + i * 5, 1305, barW, 45);
       }
 
@@ -369,60 +390,142 @@ export default function App() {
       ctx.font = "13px 'Chakra Petch', monospace";
       ctx.fillText("REPORT SIGHTINGS TO VCPD DISPATCH (1-800-VICE-PD)", 940, 1345);
 
-      // Finish rendering poster
       const renderedUrl = canvas.toDataURL("image/png");
       setFinalPosterUrl(renderedUrl);
-      setIsGeneratingPoster(false);
+      setIsGenerating(false);
+
+      // Auto-scroll to poster on mobile/desktop
+      setTimeout(() => {
+        posterSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
     };
 
-    suspectImg.src = editedImgDataUrl;
+    img.src = sourceImageUrl;
+  }, [suspect]);
+
+  // Instant Trigger: Generate Poster using current editor state or base image
+  const handleInstantGenerate = () => {
+    playShutterSound();
+    // Use the ref API getImage() from @unlayer/react-image-editor if available, else fallback
+    const editorCanvasUrl = editorRef.current?.editor?.getImage();
+    const imageToUse = editorCanvasUrl || currentImage;
+    renderPosterCanvas(imageToUse);
+    showToast("Official VCPD Wanted Poster generated!");
   };
 
-  // Copy Rap Sheet text
-  const handleCopyRapSheet = () => {
-    playClickSound();
-    const text = `🚨 [VCPD WANTED BULLETIN] 🚨
-SUSPECT: ${suspect.name} (AKA: ${suspect.alias})
-WANTED RATING: ${"★".repeat(suspect.stars)}
-BOUNTY: $${suspect.bounty.toLocaleString()}
-CHARGES: ${suspect.charge}
-LAST SEEN: ${suspect.location}
-STATUS: ${suspect.dangerLevel}
-DOCKET: ${suspect.bookingNo}
-------------------------------------
-Built with React Image Editor Challenge`;
+  // On Save from Unlayer Image Editor
+  const handleEditorSave = ({ dataUrl }) => {
+    playShutterSound();
+    renderPosterCanvas(dataUrl);
+    showToast("Edits applied! Wanted Poster created below.");
+  };
 
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedNotification(true);
-      setTimeout(() => setCopiedNotification(false), 3000);
-    });
+  // Instant Download Action
+  const handleInstantDownload = () => {
+    playClickSound();
+    if (!finalPosterUrl) {
+      handleInstantGenerate();
+      return;
+    }
+    const a = document.createElement("a");
+    a.href = finalPosterUrl;
+    a.download = `VCPD_WANTED_${suspect.name.replace(/[^a-zA-Z0-9]/g, "_")}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast("Downloading High-Res Wanted Poster...");
+  };
+
+  // Share Link / Share Card (supports Web Share API & URL Search Params)
+  const handleShareLink = async () => {
+    playClickSound();
+    const url = new URL(window.location.origin + window.location.pathname);
+    url.searchParams.set("preset", suspect.id);
+    url.searchParams.set("name", suspect.name);
+    url.searchParams.set("alias", suspect.alias);
+    url.searchParams.set("stars", suspect.stars);
+    url.searchParams.set("bounty", suspect.bounty);
+    url.searchParams.set("charge", suspect.charge);
+    url.searchParams.set("location", suspect.location);
+    url.searchParams.set("danger", suspect.dangerLevel);
+    url.searchParams.set("docket", suspect.bookingNo);
+
+    const shareUrl = url.toString();
+    const shareText = `🚨 VCPD WANTED BULLETIN 🚨\nSUSPECT: ${suspect.name} (${suspect.alias})\nWANTED LEVEL: ${"★".repeat(suspect.stars)}\nBOUNTY: $${suspect.bounty.toLocaleString()}\nCHARGES: ${suspect.charge}\n\nBuilt with React Image Editor Challenge #BuiltWithImageEditor\n${shareUrl}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `VCPD Wanted: ${suspect.name}`,
+          text: shareText,
+          url: shareUrl,
+        });
+        showToast("Shared successfully!");
+        return;
+      } catch {
+        // Fallback to clipboard
+      }
+    }
+
+    // Clipboard fallback
+    try {
+      await navigator.clipboard.writeText(shareText);
+      showToast("✓ Copied shareable link & rap sheet to clipboard!");
+    } catch {
+      showToast("Link: " + shareUrl);
+    }
   };
 
   return (
-    <div style={{ minHeight: "100vh", padding: "20px 24px", position: "relative" }}>
+    <div style={{ minHeight: "100vh", padding: "16px clamp(12px, 3vw, 28px)", position: "relative" }}>
       {/* Optional CRT Scanlines Layer */}
       {scanlinesActive && <div className="scanlines-overlay" />}
 
       {/* Hidden canvas for official poster compositing */}
       <canvas ref={posterCanvasRef} style={{ display: "none" }} />
 
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "24px",
+            right: "24px",
+            zIndex: 10000,
+            backgroundColor: "#0f172a",
+            color: "#ffffff",
+            border: "1px solid var(--neon-cyan)",
+            padding: "12px 20px",
+            borderRadius: "8px",
+            boxShadow: "0 0 20px var(--neon-cyan-glow)",
+            fontSize: "14px",
+            fontWeight: "700",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+          }}
+        >
+          <span style={{ color: "var(--neon-cyan)" }}>✦</span>
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* ================= HUD HEADER ================= */}
       <header
         className="vice-panel"
         style={{
-          padding: "16px 24px",
-          marginBottom: "20px",
+          padding: "16px 20px",
+          marginBottom: "16px",
           display: "flex",
           flexWrap: "wrap",
           justifyContent: "space-between",
           alignItems: "center",
-          gap: "16px",
-          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.5)",
+          gap: "14px",
         }}
       >
-        {/* Left: Department & Title */}
+        {/* Left Title & Status */}
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
             <span
               className="hud-font"
               style={{
@@ -430,7 +533,7 @@ Built with React Image Editor Challenge`;
                 color: "#ffffff",
                 fontSize: "11px",
                 fontWeight: "800",
-                padding: "3px 8px",
+                padding: "2px 7px",
                 borderRadius: "3px",
                 letterSpacing: "1px",
               }}
@@ -438,7 +541,7 @@ Built with React Image Editor Challenge`;
               VCPD TERMINAL 06
             </span>
 
-            {/* Blinking Live REC Indicator */}
+            {/* Blinking Live REC */}
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <span
                 className="rec-indicator"
@@ -450,22 +553,22 @@ Built with React Image Editor Challenge`;
                   display: "inline-block",
                 }}
               />
-              <span className="hud-font" style={{ color: "#ef4444", fontSize: "12px", fontWeight: "700" }}>
-                LIVE CCTV REC
+              <span className="hud-font" style={{ color: "#ef4444", fontSize: "11px", fontWeight: "800" }}>
+                LIVE CCTV
               </span>
             </div>
 
             <span className="hud-font" style={{ color: "#64748b", fontSize: "12px" }}>
-              | VICE CITY TIME: <strong style={{ color: "#38bdf8" }}>{currentTime || "00:00:00"} EDT</strong>
+              | TIME: <strong style={{ color: "#38bdf8" }}>{currentTime || "00:00:00"} EDT</strong>
             </span>
           </div>
 
           <h1
             style={{
               margin: 0,
-              fontSize: "clamp(24px, 3.5vw, 36px)",
+              fontSize: "clamp(22px, 3.8vw, 34px)",
               fontWeight: "900",
-              letterSpacing: "2px",
+              letterSpacing: "1.5px",
               textTransform: "uppercase",
               background: "linear-gradient(90deg, #ff007a 0%, #ff529a 50%, #00f0ff 100%)",
               WebkitBackgroundClip: "text",
@@ -475,32 +578,71 @@ Built with React Image Editor Challenge`;
           >
             Vice City Mugshot Lab
           </h1>
-          <p className="hud-font" style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "13px" }}>
-            Leonida Department of Corrections • Wanted Bulletin & Surveillance Editor
+          <p className="hud-font" style={{ margin: "2px 0 0", color: "#94a3b8", fontSize: "12px" }}>
+            Leonida Department of Corrections • Powered by React Image Editor
           </p>
         </div>
 
-        {/* Right: Audio / CRT / Dispatch Controls */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "center" }}>
+        {/* Right Audio & Action Controls */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
+          {/* Quick Generate Action */}
+          <button
+            onClick={handleInstantGenerate}
+            disabled={isGenerating}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "9px 16px",
+              fontSize: "13px",
+              fontWeight: "800",
+              borderRadius: "6px",
+              backgroundColor: "var(--neon-pink)",
+              border: "none",
+              color: "#ffffff",
+              cursor: "pointer",
+              boxShadow: "0 0 14px var(--neon-pink-glow)",
+              transition: "transform 0.15s ease",
+            }}
+          >
+            <span>⚡ {isGenerating ? "GENERATING..." : "GENERATE POSTER"}</span>
+          </button>
+
+          {/* Quick Share Link */}
+          <button
+            onClick={handleShareLink}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "9px 14px",
+              fontSize: "13px",
+              fontWeight: "700",
+              borderRadius: "6px",
+              backgroundColor: "#1e293b",
+              border: "1px solid #334155",
+              color: "#38bdf8",
+              cursor: "pointer",
+            }}
+          >
+            <span>📤 SHARE CARD</span>
+          </button>
+
           {/* Synthwave Radio Toggle */}
           <button
             onClick={handleToggleMusic}
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "8px 14px",
+              padding: "9px 13px",
               fontSize: "13px",
               fontWeight: "700",
               borderRadius: "6px",
-              backgroundColor: musicPlaying ? "rgba(255, 0, 122, 0.25)" : "#1e293b",
+              backgroundColor: musicPlaying ? "rgba(255, 0, 122, 0.25)" : "#0f172a",
               border: `1px solid ${musicPlaying ? "var(--neon-pink)" : "#334155"}`,
               color: musicPlaying ? "var(--neon-pink)" : "#94a3b8",
               cursor: "pointer",
-              transition: "all 0.2s ease",
             }}
           >
-            <span>{musicPlaying ? "🔊 VICE FM (PLAYING)" : "🔈 VICE FM (RADIO OFF)"}</span>
+            <span>{musicPlaying ? "🔊 VICE FM (ON)" : "🔈 VICE FM"}</span>
           </button>
 
           {/* CRT Scanline Toggle */}
@@ -510,120 +652,133 @@ Built with React Image Editor Challenge`;
               setScanlinesActive(!scanlinesActive);
             }}
             style={{
-              padding: "8px 14px",
+              padding: "9px 13px",
               fontSize: "13px",
               fontWeight: "700",
               borderRadius: "6px",
-              backgroundColor: scanlinesActive ? "rgba(0, 240, 255, 0.15)" : "#1e293b",
+              backgroundColor: scanlinesActive ? "rgba(0, 240, 255, 0.15)" : "#0f172a",
               border: `1px solid ${scanlinesActive ? "var(--neon-cyan)" : "#334155"}`,
               color: scanlinesActive ? "var(--neon-cyan)" : "#94a3b8",
               cursor: "pointer",
             }}
           >
-            CRT FX: {scanlinesActive ? "ON" : "OFF"}
+            CRT: {scanlinesActive ? "ON" : "OFF"}
           </button>
 
           {/* Radio Dispatch Cue */}
           <button
-            onClick={() => {
-              playDispatchSound();
-            }}
+            onClick={() => playDispatchSound()}
+            title="Play Police Radio Beep"
             style={{
-              padding: "8px 14px",
+              padding: "9px 12px",
               fontSize: "13px",
               fontWeight: "700",
               borderRadius: "6px",
-              backgroundColor: "#1e293b",
+              backgroundColor: "#0f172a",
               border: "1px solid #334155",
               color: "#fbbf24",
               cursor: "pointer",
             }}
           >
-            📻 10-99 BEEP
+            📻 10-99
           </button>
         </div>
       </header>
 
-      {/* ================= SUSPECT SELECTION & UPLOAD BAR ================= */}
+      {/* ================= SUSPECT PRESETS (HORIZONTAL SCROLL ON MOBILE) ================= */}
       <div
         className="vice-panel"
         style={{
-          padding: "14px 20px",
-          marginBottom: "20px",
+          padding: "12px 16px",
+          marginBottom: "16px",
           display: "flex",
           flexWrap: "wrap",
           justifyContent: "space-between",
           alignItems: "center",
-          gap: "14px",
+          gap: "12px",
         }}
       >
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px" }}>
-          <span className="hud-font" style={{ fontSize: "13px", color: "#64748b", fontWeight: "700" }}>
-            SELECT DOSSIER:
+        {/* Preset Buttons Scroll Container */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            overflowX: "auto",
+            maxWidth: "100%",
+            paddingBottom: "4px",
+          }}
+        >
+          <span className="hud-font" style={{ fontSize: "12px", color: "#64748b", fontWeight: "700", flexShrink: 0 }}>
+            DOSSIER:
           </span>
 
-          {PRESET_SUSPECTS.map((tpl) => (
-            <button
-              key={tpl.id}
-              onClick={() => selectPreset(tpl)}
-              style={{
-                padding: "8px 14px",
-                fontSize: "13px",
-                fontWeight: "700",
-                borderRadius: "6px",
-                cursor: "pointer",
-                border: "1px solid",
-                borderColor: suspect.id === tpl.id ? "var(--neon-pink)" : "#334155",
-                backgroundColor: suspect.id === tpl.id ? "rgba(255, 0, 122, 0.2)" : "#0f172a",
-                color: suspect.id === tpl.id ? "#ffffff" : "#94a3b8",
-                boxShadow: suspect.id === tpl.id ? "0 0 12px var(--neon-pink-glow)" : "none",
-                transition: "all 0.2s ease",
-              }}
-            >
-              {tpl.name}
-            </button>
-          ))}
+          {PRESET_SUSPECTS.map((tpl) => {
+            const isSelected = suspect.id === tpl.id;
+            return (
+              <button
+                key={tpl.id}
+                onClick={() => selectPreset(tpl)}
+                style={{
+                  padding: "7px 13px",
+                  fontSize: "12px",
+                  fontWeight: "700",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  border: "1px solid",
+                  borderColor: isSelected ? "var(--neon-pink)" : "#334155",
+                  backgroundColor: isSelected ? "rgba(255, 0, 122, 0.2)" : "#0f172a",
+                  color: isSelected ? "#ffffff" : "#94a3b8",
+                  boxShadow: isSelected ? "0 0 10px var(--neon-pink-glow)" : "none",
+                  flexShrink: 0,
+                }}
+              >
+                {tpl.name}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Custom Upload Button */}
+        {/* Custom Suspect Photo Upload */}
         <label
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: "8px",
-            padding: "9px 18px",
-            backgroundColor: "rgba(0, 240, 255, 0.15)",
+            gap: "6px",
+            padding: "8px 16px",
+            backgroundColor: "rgba(0, 240, 255, 0.12)",
             border: "1px solid var(--neon-cyan)",
             borderRadius: "6px",
             cursor: "pointer",
-            fontSize: "13px",
+            fontSize: "12px",
             fontWeight: "700",
             color: "var(--neon-cyan)",
-            boxShadow: "0 0 10px var(--neon-cyan-glow)",
+            flexShrink: 0,
           }}
         >
-          <span>📁 + UPLOAD SUSPECT PHOTO</span>
+          <span>📁 UPLOAD CUSTOM SUSPECT</span>
           <input type="file" accept="image/*" onChange={handleFileUpload} style={{ display: "none" }} />
         </label>
       </div>
 
-      {/* ================= MAIN INTERFACE (RAP SHEET & EDITOR) ================= */}
+      {/* ================= MAIN GRID: RAP SHEET + EDITOR ================= */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
-          gap: "20px",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))",
+          gap: "16px",
           alignItems: "start",
         }}
       >
-        {/* Left Side: Suspect Rap Sheet & Live Controls */}
+        {/* Left Column: Rap Sheet Docket Controls */}
         <div
           className="vice-panel"
           style={{
-            padding: "20px",
+            padding: "18px",
             display: "flex",
             flexDirection: "column",
-            gap: "16px",
+            gap: "14px",
           }}
         >
           <div
@@ -632,20 +787,20 @@ Built with React Image Editor Challenge`;
               justifyContent: "space-between",
               alignItems: "center",
               borderBottom: "1px solid rgba(255, 0, 122, 0.3)",
-              paddingBottom: "12px",
+              paddingBottom: "10px",
             }}
           >
             <h2
               className="hud-font"
               style={{
                 margin: 0,
-                fontSize: "17px",
+                fontSize: "16px",
                 color: "#ff007a",
                 textTransform: "uppercase",
                 letterSpacing: "1px",
               }}
             >
-              📑 Suspect Docket Data
+              📑 Criminal Rap Sheet
             </h2>
             <span
               className="hud-font"
@@ -661,12 +816,12 @@ Built with React Image Editor Challenge`;
             </span>
           </div>
 
-          {/* Interactive Wanted Stars */}
+          {/* Interactive Wanted Star Rating */}
           <div>
-            <label className="hud-font" style={{ fontSize: "12px", color: "#94a3b8", display: "block", marginBottom: "6px" }}>
-              WANTED LEVEL (CLICK TO ADJUST THREAT):
+            <label className="hud-font" style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
+              WANTED LEVEL (CLICK STARS TO ESCALATE THREAT):
             </label>
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
               {[1, 2, 3, 4, 5].map((star) => {
                 const isActive = star <= suspect.stars;
                 return (
@@ -677,12 +832,11 @@ Built with React Image Editor Challenge`;
                     style={{
                       background: "none",
                       border: "none",
-                      fontSize: "30px",
+                      fontSize: "28px",
                       cursor: "pointer",
                       color: isActive ? "#fbbf24" : "#334155",
                       padding: 0,
                       lineHeight: 1,
-                      transition: "transform 0.15s ease",
                     }}
                     title={`Set Wanted Level ${star}`}
                   >
@@ -693,8 +847,8 @@ Built with React Image Editor Challenge`;
               <span
                 className="hud-font"
                 style={{
-                  marginLeft: "10px",
-                  fontSize: "13px",
+                  marginLeft: "8px",
+                  fontSize: "12px",
                   color: "#fbbf24",
                   fontWeight: "700",
                 }}
@@ -706,8 +860,8 @@ Built with React Image Editor Challenge`;
 
           {/* Suspect Name Input */}
           <div>
-            <label className="hud-font" style={{ fontSize: "12px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
-              SUSPECT FULL NAME:
+            <label className="hud-font" style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
+              SUSPECT NAME:
             </label>
             <input
               type="text"
@@ -729,7 +883,7 @@ Built with React Image Editor Challenge`;
 
           {/* Suspect Alias Input */}
           <div>
-            <label className="hud-font" style={{ fontSize: "12px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
+            <label className="hud-font" style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
               ALIAS / MONIKER:
             </label>
             <input
@@ -752,8 +906,8 @@ Built with React Image Editor Challenge`;
 
           {/* Bounty Reward */}
           <div>
-            <label className="hud-font" style={{ fontSize: "12px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
-              BOUNTY / REWARD ($ USD):
+            <label className="hud-font" style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
+              BOUNTY / CASH REWARD ($ USD):
             </label>
             <input
               type="number"
@@ -767,7 +921,7 @@ Built with React Image Editor Challenge`;
                 border: "1px solid #fbbf24",
                 borderRadius: "6px",
                 color: "#fbbf24",
-                fontSize: "18px",
+                fontSize: "17px",
                 fontWeight: "900",
                 outline: "none",
               }}
@@ -776,8 +930,8 @@ Built with React Image Editor Challenge`;
 
           {/* Primary Charge */}
           <div>
-            <label className="hud-font" style={{ fontSize: "12px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
-              PRIMARY OFFENSE / FELONY:
+            <label className="hud-font" style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
+              PRIMARY OFFENSE:
             </label>
             <input
               type="text"
@@ -790,7 +944,7 @@ Built with React Image Editor Challenge`;
                 border: "1px solid #334155",
                 borderRadius: "6px",
                 color: "#f8fafc",
-                fontSize: "14px",
+                fontSize: "13px",
                 outline: "none",
               }}
             />
@@ -798,7 +952,7 @@ Built with React Image Editor Challenge`;
 
           {/* Last Seen Location */}
           <div>
-            <label className="hud-font" style={{ fontSize: "12px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
+            <label className="hud-font" style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
               LAST SIGHTED LOCATION:
             </label>
             <input
@@ -812,16 +966,16 @@ Built with React Image Editor Challenge`;
                 border: "1px solid #334155",
                 borderRadius: "6px",
                 color: "#00f0ff",
-                fontSize: "14px",
+                fontSize: "13px",
                 outline: "none",
               }}
             />
           </div>
 
-          {/* Danger Level Status */}
+          {/* Threat Warning */}
           <div>
-            <label className="hud-font" style={{ fontSize: "12px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
-              TACTICAL DANGER WARNING:
+            <label className="hud-font" style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
+              THREAT ASSESSMENT:
             </label>
             <input
               type="text"
@@ -834,61 +988,101 @@ Built with React Image Editor Challenge`;
                 border: "1px solid #e11d48",
                 borderRadius: "6px",
                 color: "#ff4d6d",
-                fontSize: "13px",
+                fontSize: "12px",
                 fontWeight: "700",
                 outline: "none",
               }}
             />
           </div>
 
-          {/* Copy Docket Quick Action */}
-          <button
-            onClick={handleCopyRapSheet}
-            style={{
-              marginTop: "6px",
-              padding: "10px",
-              backgroundColor: copiedNotification ? "#059669" : "#1e293b",
-              border: "1px solid #334155",
-              borderRadius: "6px",
-              color: "#ffffff",
-              fontSize: "13px",
-              fontWeight: "700",
-              cursor: "pointer",
-              transition: "background-color 0.2s ease",
-            }}
-          >
-            {copiedNotification ? "✓ COPIED TO CLIPBOARD" : "📋 COPY RAP SHEET TEXT"}
-          </button>
+          {/* Action Row */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "4px" }}>
+            <button
+              onClick={handleInstantGenerate}
+              style={{
+                padding: "11px",
+                backgroundColor: "var(--neon-pink)",
+                border: "none",
+                borderRadius: "6px",
+                color: "#ffffff",
+                fontSize: "13px",
+                fontWeight: "800",
+                cursor: "pointer",
+                boxShadow: "0 0 10px var(--neon-pink-glow)",
+              }}
+            >
+              ⚡ GENERATE POSTER
+            </button>
+
+            <button
+              onClick={handleShareLink}
+              style={{
+                padding: "11px",
+                backgroundColor: "#1e293b",
+                border: "1px solid #334155",
+                borderRadius: "6px",
+                color: "#38bdf8",
+                fontSize: "13px",
+                fontWeight: "700",
+                cursor: "pointer",
+              }}
+            >
+              📋 COPY SHARE CARD
+            </button>
+          </div>
         </div>
 
-        {/* Right Side: React Image Editor Container */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        {/* Right Column: React Image Editor */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {/* Tool Guidance Bar */}
           <div
             style={{
               display: "flex",
+              flexWrap: "wrap",
               justifyContent: "space-between",
               alignItems: "center",
-              padding: "6px 12px",
-              backgroundColor: "rgba(15, 23, 42, 0.6)",
+              gap: "8px",
+              padding: "8px 12px",
+              backgroundColor: "rgba(15, 23, 42, 0.75)",
               borderRadius: "6px",
               border: "1px solid #1e293b",
             }}
           >
-            <span className="hud-font" style={{ fontSize: "13px", color: "#38bdf8", fontWeight: "700" }}>
-              🛠️ REACT IMAGE EDITOR ENGINE
-            </span>
-            <span className="hud-font" style={{ fontSize: "12px", color: "#94a3b8" }}>
-              Use Crop, Filters, Text & Shapes, then click <strong>Apply / Save</strong>
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span className="hud-font" style={{ fontSize: "12px", color: "var(--neon-cyan)", fontWeight: "800" }}>
+                🛠️ REACT IMAGE EDITOR
+              </span>
+              <span style={{ fontSize: "11px", color: "#94a3b8" }}>
+                Crop • Filters • Draw • Text • Stickers • Frames
+              </span>
+            </div>
+
+            <button
+              onClick={handleInstantGenerate}
+              style={{
+                padding: "4px 10px",
+                backgroundColor: "rgba(255, 0, 122, 0.2)",
+                border: "1px solid var(--neon-pink)",
+                borderRadius: "4px",
+                color: "#ff007a",
+                fontSize: "11px",
+                fontWeight: "800",
+                cursor: "pointer",
+              }}
+            >
+              USE CURRENT EDITS ➔
+            </button>
           </div>
 
+          {/* The React Image Editor Container */}
           <div
             style={{
-              height: "700px",
+              height: "clamp(540px, 72vh, 760px)",
+              width: "100%",
               borderRadius: "8px",
               overflow: "hidden",
               border: "2px solid rgba(255, 0, 122, 0.4)",
-              boxShadow: "0 12px 40px rgba(0,0,0,0.8)",
+              boxShadow: "0 10px 40px rgba(0,0,0,0.8)",
               backgroundColor: "#000000",
             }}
           >
@@ -898,25 +1092,40 @@ Built with React Image Editor Challenge`;
               image={currentImage}
               options={{
                 theme: "dark",
+                features: {
+                  imageEditor: {
+                    tools: {
+                      crop: true,
+                      filter: true,
+                      draw: true,
+                      text: true,
+                      shapes: true,
+                      stickers: true,
+                      frame: true,
+                      resize: true,
+                    },
+                  },
+                },
               }}
-              onSave={handleSave}
+              onSave={handleEditorSave}
               onCancel={() => {
                 playClickSound();
-                console.info("Edit canceled");
+                showToast("Editing cancelled");
               }}
-              onLoadError={() => console.error("Image load failed. Verify URL or CORS.")}
+              onLoadError={() => showToast("Image load error. Check CORS.")}
             />
           </div>
         </div>
       </div>
 
-      {/* ================= FINAL GENERATED WANTED POSTER DISPLAY ================= */}
+      {/* ================= OFFICIAL WANTED POSTER SECTION ================= */}
       {finalPosterUrl && (
         <section
+          ref={posterSectionRef}
           className="vice-panel"
           style={{
-            marginTop: "32px",
-            padding: "28px",
+            marginTop: "28px",
+            padding: "clamp(16px, 3vw, 28px)",
             border: "2px solid var(--neon-pink)",
             boxShadow: "0 10px 40px var(--neon-pink-glow)",
           }}
@@ -928,18 +1137,18 @@ Built with React Image Editor Challenge`;
               justifyContent: "space-between",
               alignItems: "center",
               gap: "12px",
-              marginBottom: "20px",
+              marginBottom: "18px",
               borderBottom: "1px solid rgba(255, 0, 122, 0.3)",
               paddingBottom: "14px",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ fontSize: "20px" }}>🚨</span>
+              <span style={{ fontSize: "22px" }}>🚨</span>
               <h3
                 className="hud-font"
                 style={{
                   margin: 0,
-                  fontSize: "20px",
+                  fontSize: "clamp(17px, 2.5vw, 22px)",
                   textTransform: "uppercase",
                   color: "#ffffff",
                   letterSpacing: "1px",
@@ -949,11 +1158,9 @@ Built with React Image Editor Challenge`;
               </h3>
             </div>
 
-            <div style={{ display: "flex", gap: "10px" }}>
-              <a
-                href={finalPosterUrl}
-                download={`VCPD-WANTED-${suspect.name.replace(/\s+/g, "_")}.png`}
-                onClick={() => playClickSound()}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+              <button
+                onClick={handleInstantDownload}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
@@ -961,7 +1168,7 @@ Built with React Image Editor Challenge`;
                   padding: "10px 20px",
                   backgroundColor: "var(--neon-pink)",
                   color: "#ffffff",
-                  textDecoration: "none",
+                  border: "none",
                   borderRadius: "6px",
                   fontWeight: "800",
                   fontSize: "14px",
@@ -969,11 +1176,11 @@ Built with React Image Editor Challenge`;
                   cursor: "pointer",
                 }}
               >
-                💾 DOWNLOAD HIGH-RES POSTER (PNG)
-              </a>
+                💾 DOWNLOAD POSTER (.PNG)
+              </button>
 
               <button
-                onClick={handleCopyRapSheet}
+                onClick={handleShareLink}
                 style={{
                   padding: "10px 18px",
                   backgroundColor: "#1e293b",
@@ -985,7 +1192,7 @@ Built with React Image Editor Challenge`;
                   cursor: "pointer",
                 }}
               >
-                📋 SHARE RAP SHEET
+                📤 SHARE CARD / LINK
               </button>
             </div>
           </div>
@@ -994,50 +1201,88 @@ Built with React Image Editor Challenge`;
             style={{
               display: "flex",
               flexWrap: "wrap",
-              gap: "32px",
+              gap: "28px",
               justifyContent: "center",
               alignItems: "center",
             }}
           >
             {/* The Rendered Poster Preview */}
-            <img
-              src={finalPosterUrl}
-              alt="Generated Official VCPD Wanted Poster"
-              style={{
-                maxWidth: "480px",
-                width: "100%",
-                borderRadius: "8px",
-                boxShadow: "0 15px 45px rgba(0, 0, 0, 0.9)",
-                border: "2px solid #334155",
-              }}
-            />
+            <div style={{ maxWidth: "460px", width: "100%" }}>
+              <img
+                src={finalPosterUrl}
+                alt="Generated Official VCPD Wanted Poster"
+                style={{
+                  width: "100%",
+                  borderRadius: "8px",
+                  boxShadow: "0 15px 45px rgba(0, 0, 0, 0.9)",
+                  border: "2px solid #334155",
+                  display: "block",
+                }}
+              />
+            </div>
 
             {/* Poster Details & Summary */}
-            <div style={{ maxWidth: "460px" }}>
+            <div style={{ maxWidth: "480px", flex: "1 1 300px" }}>
               <div
                 style={{
                   padding: "16px",
-                  backgroundColor: "rgba(15, 23, 42, 0.9)",
+                  backgroundColor: "rgba(15, 23, 42, 0.95)",
                   borderRadius: "8px",
-                  border: "1px solid rgba(251, 191, 36, 0.3)",
+                  border: "1px solid rgba(251, 191, 36, 0.35)",
                   marginBottom: "16px",
                 }}
               >
                 <div style={{ color: "#fbbf24", fontWeight: "800", fontSize: "14px", marginBottom: "6px" }}>
                   ⭐ WANTED LEVEL {suspect.stars} • REWARD: ${suspect.bounty.toLocaleString()}
                 </div>
-                <div style={{ color: "#ffffff", fontWeight: "700", fontSize: "16px" }}>
-                  {suspect.name} ({suspect.alias})
+                <div style={{ color: "#ffffff", fontWeight: "800", fontSize: "18px" }}>
+                  {suspect.name} ("{suspect.alias}")
                 </div>
-                <div style={{ color: "#94a3b8", fontSize: "13px", marginTop: "4px" }}>
-                  {suspect.charge} • Seen at: {suspect.location}
+                <div style={{ color: "#94a3b8", fontSize: "13px", marginTop: "6px" }}>
+                  {suspect.charge}
+                </div>
+                <div style={{ color: "#00f0ff", fontSize: "13px", marginTop: "4px" }}>
+                  Last Seen: {suspect.location}
                 </div>
               </div>
 
               <p style={{ color: "#94a3b8", fontSize: "14px", lineHeight: "1.6" }}>
-                This high-resolution bulletin includes your customized suspect edits from the React Image Editor,
-                complete with the VCPD seal, measurement height chart, booking docket barcode, and active bounty.
+                Ready to submit! The poster contains your customized mugshot edits directly rendered from the React Image Editor,
+                with the official VCPD booking grid, barcode, threat level, and Leonida Department of Corrections seal.
               </p>
+
+              <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+                <button
+                  onClick={handleInstantDownload}
+                  style={{
+                    padding: "9px 18px",
+                    backgroundColor: "transparent",
+                    border: "1px solid var(--neon-cyan)",
+                    color: "var(--neon-cyan)",
+                    borderRadius: "6px",
+                    fontSize: "13px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                  }}
+                >
+                  ⬇️ Save Again
+                </button>
+                <button
+                  onClick={handleShareLink}
+                  style={{
+                    padding: "9px 18px",
+                    backgroundColor: "transparent",
+                    border: "1px solid #334155",
+                    color: "#94a3b8",
+                    borderRadius: "6px",
+                    fontSize: "13px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                  }}
+                >
+                  🔗 Copy Link
+                </button>
+              </div>
             </div>
           </div>
         </section>
