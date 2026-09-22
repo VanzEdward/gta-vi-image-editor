@@ -71,6 +71,39 @@ const PRESET_SUSPECTS = [
   },
 ];
 
+const RANDOM_CRIMES = [
+  "Armed Robbery at Vice Beach Jewelry Exchange",
+  "High-Speed Yacht Piracy off Starfish Island",
+  "Illicit Airboat Evading in the Grassrivers Bayou",
+  "Extortion & Exotic Animal Trafficking in Little Haiti",
+  "Reckless Supercar Street Racing on Ocean Drive",
+  "Federal Reserve Vault Breach with Heavy Explosives",
+  "Counterfeit Casino Chip Syndicate in Vice Port",
+  "High-Tech Cyber Extortion of Leonida Port Authority",
+];
+
+const RANDOM_LOCATIONS = [
+  "Ocean Beach / Washington Ave",
+  "Starfish Island Gateway",
+  "Little Haiti / 54th Street",
+  "Downtown Financial District",
+  "Vice Port Container Dock 7",
+  "Grassrivers Airboat Basin",
+  "Venetian Islands Causeway",
+  "Leonida Keys Overseas Highway",
+];
+
+const RANDOM_ALIASES = [
+  "THE SUNSET PHANTOM",
+  "VICE CITY VIPER",
+  "THE NEON DRIFTER",
+  "LEONIDA KINGPIN",
+  "THE HARBOR GHOST",
+  "KEY WEST BANDIT",
+  "THE HEIST MASTERMIND",
+  "OCEAN DRIVE SHADOW",
+];
+
 export default function App() {
   const editorRef = useRef(null);
   const posterCanvasRef = useRef(null);
@@ -104,6 +137,7 @@ export default function App() {
   // State
   const [suspect, setSuspect] = useState(getInitialSuspect);
   const [currentImage, setCurrentImage] = useState(suspect.url);
+  const [editorKey, setEditorKey] = useState(0);
   const [finalPosterUrl, setFinalPosterUrl] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
@@ -141,6 +175,7 @@ export default function App() {
     playClickSound();
     setSuspect(preset);
     setCurrentImage(preset.url);
+    setEditorKey((k) => k + 1);
     setFinalPosterUrl(null);
   };
 
@@ -152,6 +187,7 @@ export default function App() {
       const reader = new FileReader();
       reader.onload = () => {
         setCurrentImage(reader.result);
+        setEditorKey((k) => k + 1);
         setSuspect((prev) => ({
           ...prev,
           name: "NEW UNIDENTIFIED SUSPECT",
@@ -159,7 +195,7 @@ export default function App() {
           bookingNo: `VCPD-2026-${Math.floor(1000 + Math.random() * 9000)}X`,
         }));
         setFinalPosterUrl(null);
-        showToast("Suspect photo loaded into editor!");
+        showToast("Custom photo loaded into editor!");
       };
       reader.readAsDataURL(file);
     }
@@ -170,11 +206,11 @@ export default function App() {
     playStarSound(rating);
     const bountyScale = [10000, 50000, 150000, 500000, 1000000];
     const threatLevels = [
-      "PETTY MISDEMEANOR / CITATION",
+      "PETTY CITATION / VEHICULAR TRAFFIC",
       "ACTIVE WARRANT / VEHICULAR FLIGHT",
-      "TACTICAL CALLOUT / ARMED ROBBERY",
+      "TACTICAL CALLOUT / ARMED FELONY",
       "VCPD SWAT & AIR SUPPORT DEPLOYED",
-      "NOOSE & MILITARY AUTHORIZED - EXTREME DANGER",
+      "NOOSE & MILITARY AUTHORIZED - SHOOT ON SIGHT",
     ];
 
     setSuspect((prev) => ({
@@ -183,6 +219,24 @@ export default function App() {
       bounty: bountyScale[rating - 1],
       dangerLevel: threatLevels[rating - 1],
     }));
+  };
+
+  // Randomize Rap Sheet generator
+  const handleRandomizeDocket = () => {
+    playClickSound();
+    const randomCrime = RANDOM_CRIMES[Math.floor(Math.random() * RANDOM_CRIMES.length)];
+    const randomLoc = RANDOM_LOCATIONS[Math.floor(Math.random() * RANDOM_LOCATIONS.length)];
+    const randomAlias = RANDOM_ALIASES[Math.floor(Math.random() * RANDOM_ALIASES.length)];
+    const randomBounty = Math.floor(Math.random() * 9 + 1) * 100000 + 50000;
+
+    setSuspect((prev) => ({
+      ...prev,
+      alias: randomAlias,
+      charge: randomCrime,
+      location: randomLoc,
+      bounty: randomBounty,
+    }));
+    showToast("🎲 Generated new random crime dossier!");
   };
 
   // Synthesizer Radio Toggle
@@ -394,7 +448,7 @@ export default function App() {
       setFinalPosterUrl(renderedUrl);
       setIsGenerating(false);
 
-      // Auto-scroll to poster on mobile/desktop
+      // Auto-scroll to poster
       setTimeout(() => {
         posterSectionRef.current?.scrollIntoView({ behavior: "smooth" });
       }, 100);
@@ -403,27 +457,41 @@ export default function App() {
     img.src = sourceImageUrl;
   }, [suspect]);
 
-  // Instant Trigger: Generate Poster using current editor state or base image
-  const handleInstantGenerate = () => {
+  // Primary Action: Compose Wanted Poster (Uses current canvas or current image)
+  const handleComposeWantedPoster = () => {
     playShutterSound();
     const editorCanvasUrl = editorRef.current?.editor?.getImage();
     const imageToUse = editorCanvasUrl || currentImage;
     renderPosterCanvas(imageToUse);
-    showToast("Official VCPD Wanted Poster generated!");
+    showToast("Official VCPD Wanted Poster generated below!");
   };
 
-  // On Save from Unlayer Image Editor
+  // On Save from Unlayer Image Editor: Saves edits to current profile photo
   const handleEditorSave = ({ dataUrl }) => {
-    playShutterSound();
-    renderPosterCanvas(dataUrl);
-    showToast("Edits applied! Wanted Poster created below.");
+    playClickSound();
+    setCurrentImage(dataUrl);
+    showToast("✓ Visual edits saved! Click 'Compose Wanted Poster' to update bulletin.");
+    if (finalPosterUrl) {
+      renderPosterCanvas(dataUrl);
+    }
+  };
+
+  // On Cancel from Unlayer Image Editor: Genuinely reverts back to original unedited photo
+  const handleEditorCancel = () => {
+    playClickSound();
+    setCurrentImage(suspect.url);
+    setEditorKey((k) => k + 1);
+    if (editorRef.current?.editor?.reset) {
+      editorRef.current.editor.reset(suspect.url);
+    }
+    showToast("↺ Edits discarded. Photo reverted to original.");
   };
 
   // Instant Download Action
   const handleInstantDownload = () => {
     playClickSound();
     if (!finalPosterUrl) {
-      handleInstantGenerate();
+      handleComposeWantedPoster();
       return;
     }
     const a = document.createElement("a");
@@ -514,7 +582,7 @@ export default function App() {
         className="vice-panel"
         style={{
           padding: "16px 20px",
-          marginBottom: "16px",
+          marginBottom: "14px",
           display: "flex",
           flexWrap: "wrap",
           justifyContent: "space-between",
@@ -522,7 +590,7 @@ export default function App() {
           gap: "14px",
         }}
       >
-        {/* Left Title & Status */}
+        {/* Left Title & Department Status */}
         <div>
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
             <span
@@ -540,7 +608,7 @@ export default function App() {
               VCPD TERMINAL 06
             </span>
 
-            {/* Blinking Live REC */}
+            {/* Blinking Live REC Indicator */}
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <span
                 className="rec-indicator"
@@ -582,56 +650,13 @@ export default function App() {
           </p>
         </div>
 
-        {/* Right Audio & Action Controls */}
+        {/* Right Atmospheric & Audio Controls Only */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
-          {/* Quick Generate Action */}
-          <button
-            onClick={handleInstantGenerate}
-            disabled={isGenerating}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "9px 16px",
-              fontSize: "13px",
-              fontWeight: "800",
-              borderRadius: "6px",
-              backgroundColor: "var(--neon-pink)",
-              border: "none",
-              color: "#ffffff",
-              cursor: "pointer",
-              boxShadow: "0 0 14px var(--neon-pink-glow)",
-              transition: "transform 0.15s ease",
-            }}
-          >
-            <span>⚡ {isGenerating ? "GENERATING..." : "GENERATE POSTER"}</span>
-          </button>
-
-          {/* Quick Share Link */}
-          <button
-            onClick={handleShareLink}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "9px 14px",
-              fontSize: "13px",
-              fontWeight: "700",
-              borderRadius: "6px",
-              backgroundColor: "#1e293b",
-              border: "1px solid #334155",
-              color: "#38bdf8",
-              cursor: "pointer",
-            }}
-          >
-            <span>📤 SHARE CARD</span>
-          </button>
-
           {/* Synthwave Radio Toggle */}
           <button
             onClick={handleToggleMusic}
             style={{
-              padding: "9px 13px",
+              padding: "8px 14px",
               fontSize: "13px",
               fontWeight: "700",
               borderRadius: "6px",
@@ -651,7 +676,7 @@ export default function App() {
               setScanlinesActive(!scanlinesActive);
             }}
             style={{
-              padding: "9px 13px",
+              padding: "8px 14px",
               fontSize: "13px",
               fontWeight: "700",
               borderRadius: "6px",
@@ -669,7 +694,7 @@ export default function App() {
             onClick={() => playDispatchSound()}
             title="Play Police Radio Beep"
             style={{
-              padding: "9px 12px",
+              padding: "8px 12px",
               fontSize: "13px",
               fontWeight: "700",
               borderRadius: "6px",
@@ -684,7 +709,35 @@ export default function App() {
         </div>
       </header>
 
-      {/* ================= SUSPECT PRESETS (HORIZONTAL SCROLL ON MOBILE) ================= */}
+      {/* ================= WORKFLOW STEP INDICATOR ================= */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: "10px",
+          padding: "8px 16px",
+          marginBottom: "14px",
+          backgroundColor: "rgba(15, 23, 42, 0.5)",
+          borderRadius: "6px",
+          border: "1px solid rgba(255, 255, 255, 0.05)",
+          fontSize: "12px",
+        }}
+      >
+        <span className="hud-font" style={{ color: "#ff007a", fontWeight: "800" }}>
+          ① SELECT DOSSIER
+        </span>
+        <span style={{ color: "#64748b" }}>➔</span>
+        <span className="hud-font" style={{ color: "#00f0ff", fontWeight: "800" }}>
+          ② EDIT PHOTO & RAP SHEET
+        </span>
+        <span style={{ color: "#64748b" }}>➔</span>
+        <span className="hud-font" style={{ color: "#fbbf24", fontWeight: "800" }}>
+          ③ COMPOSE & DOWNLOAD POSTER
+        </span>
+      </div>
+
+      {/* ================= SUSPECT PRESETS ================= */}
       <div
         className="vice-panel"
         style={{
@@ -697,7 +750,7 @@ export default function App() {
           gap: "12px",
         }}
       >
-        {/* Preset Buttons Scroll Container */}
+        {/* Preset Buttons */}
         <div
           style={{
             display: "flex",
@@ -994,12 +1047,13 @@ export default function App() {
             />
           </div>
 
-          {/* Action Row */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "4px" }}>
+          {/* Clear Primary Action & Fun GTA Randomizer Button */}
+          <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "8px", marginTop: "4px" }}>
             <button
-              onClick={handleInstantGenerate}
+              onClick={handleComposeWantedPoster}
+              disabled={isGenerating}
               style={{
-                padding: "11px",
+                padding: "12px",
                 backgroundColor: "var(--neon-pink)",
                 border: "none",
                 borderRadius: "6px",
@@ -1007,33 +1061,35 @@ export default function App() {
                 fontSize: "13px",
                 fontWeight: "800",
                 cursor: "pointer",
-                boxShadow: "0 0 10px var(--neon-pink-glow)",
+                boxShadow: "0 0 14px var(--neon-pink-glow)",
+                transition: "transform 0.15s ease",
               }}
             >
-              ⚡ GENERATE POSTER
+              ⚡ {isGenerating ? "COMPOSING..." : "COMPOSE WANTED POSTER"}
             </button>
 
             <button
-              onClick={handleShareLink}
+              onClick={handleRandomizeDocket}
               style={{
-                padding: "11px",
+                padding: "12px",
                 backgroundColor: "#1e293b",
                 border: "1px solid #334155",
                 borderRadius: "6px",
                 color: "#38bdf8",
-                fontSize: "13px",
+                fontSize: "12px",
                 fontWeight: "700",
                 cursor: "pointer",
+                transition: "background-color 0.2s ease",
               }}
             >
-              📋 COPY SHARE CARD
+              🎲 RANDOM CRIME
             </button>
           </div>
         </div>
 
         {/* Right Column: React Image Editor */}
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {/* Tool Guidance Bar */}
+          {/* Tool Guidance Bar with Reset Shortcut */}
           <div
             style={{
               display: "flex",
@@ -1052,24 +1108,25 @@ export default function App() {
                 🛠️ REACT IMAGE EDITOR
               </span>
               <span style={{ fontSize: "11px", color: "#94a3b8" }}>
-                Crop • Filters • Draw • Text • Stickers • Frames
+                Filters • Text • Stickers • Draw • Crop • Shapes
               </span>
             </div>
 
             <button
-              onClick={handleInstantGenerate}
+              onClick={handleEditorCancel}
+              title="Reset all edits to original photo"
               style={{
                 padding: "4px 10px",
-                backgroundColor: "rgba(255, 0, 122, 0.2)",
-                border: "1px solid var(--neon-pink)",
+                backgroundColor: "rgba(239, 68, 68, 0.15)",
+                border: "1px solid rgba(239, 68, 68, 0.4)",
                 borderRadius: "4px",
-                color: "#ff007a",
+                color: "#f87171",
                 fontSize: "11px",
-                fontWeight: "800",
+                fontWeight: "700",
                 cursor: "pointer",
               }}
             >
-              USE CURRENT EDITS ➔
+              ↺ RESET PHOTO
             </button>
           </div>
 
@@ -1086,7 +1143,7 @@ export default function App() {
             }}
           >
             <ImageEditor
-              key={currentImage}
+              key={`${currentImage}-${editorKey}`}
               ref={editorRef}
               image={currentImage}
               options={{
@@ -1107,10 +1164,7 @@ export default function App() {
                 },
               }}
               onSave={handleEditorSave}
-              onCancel={() => {
-                playClickSound();
-                showToast("Editing cancelled");
-              }}
+              onCancel={handleEditorCancel}
               onLoadError={() => showToast("Image load error.")}
             />
           </div>
@@ -1157,6 +1211,7 @@ export default function App() {
               </h3>
             </div>
 
+            {/* Clean Export Actions on Poster Card */}
             <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
               <button
                 onClick={handleInstantDownload}
@@ -1191,7 +1246,7 @@ export default function App() {
                   cursor: "pointer",
                 }}
               >
-                📤 SHARE CARD / LINK
+                📤 SHARE BULLETIN LINK
               </button>
             </div>
           </div>
