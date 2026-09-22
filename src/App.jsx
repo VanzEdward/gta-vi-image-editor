@@ -13,7 +13,7 @@ const PRESET_SUSPECTS = [
     id: "lucia-booking",
     name: "LUCIA CAMINOS",
     alias: "THE VICE RUNNER",
-    url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1200&q=80",
+    url: "/images/lucia_mugshot.jpg",
     charge: "Armed Bank Robbery & Evading VCPD",
     bounty: 750000,
     stars: 4,
@@ -25,7 +25,7 @@ const PRESET_SUSPECTS = [
     id: "jason-pursuit",
     name: "JASON DUVAL",
     alias: "LEONIDA OUTLAW",
-    url: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=1200&q=80",
+    url: "/images/jason_mugshot.jpg",
     charge: "Grand Theft Auto & Tactical Weapons Trafficking",
     bounty: 500000,
     stars: 4,
@@ -37,7 +37,7 @@ const PRESET_SUSPECTS = [
     id: "bank-vault",
     name: "UNIDENTIFIED CREW",
     alias: "THE DOWNTOWN SYNDICATE",
-    url: "https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&w=1200&q=80",
+    url: "/images/bank_heist_cctv.jpg",
     charge: "Vice City Trust Federal Vault Breach",
     bounty: 1000000,
     stars: 5,
@@ -49,7 +49,7 @@ const PRESET_SUSPECTS = [
     id: "vice-port",
     name: "MARCO 'EL TIBURON' RIVERA",
     alias: "THE HARBOR PHANTOM",
-    url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=1200&q=80",
+    url: "/images/marco_mugshot.jpg",
     charge: "Contraband Smuggling & Speedboat Evading",
     bounty: 250000,
     stars: 3,
@@ -61,7 +61,7 @@ const PRESET_SUSPECTS = [
     id: "neon-drag",
     name: "ROXY 'NITRO' VALENTINE",
     alias: "SOUTH BEACH DRIFTER",
-    url: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1200&q=80",
+    url: "/images/roxy_mugshot.jpg",
     charge: "Illicit Street Racing & Reckless Endangerment",
     bounty: 120000,
     stars: 2,
@@ -406,7 +406,6 @@ export default function App() {
   // Instant Trigger: Generate Poster using current editor state or base image
   const handleInstantGenerate = () => {
     playShutterSound();
-    // Use the ref API getImage() from @unlayer/react-image-editor if available, else fallback
     const editorCanvasUrl = editorRef.current?.editor?.getImage();
     const imageToUse = editorCanvasUrl || currentImage;
     renderPosterCanvas(imageToUse);
@@ -463,7 +462,7 @@ export default function App() {
         showToast("Shared successfully!");
         return;
       } catch {
-        // Fallback to clipboard
+        // Fallback
       }
     }
 
@@ -1112,7 +1111,7 @@ export default function App() {
                 playClickSound();
                 showToast("Editing cancelled");
               }}
-              onLoadError={() => showToast("Image load error. Check CORS.")}
+              onLoadError={() => showToast("Image load error.")}
             />
           </div>
         </div>
