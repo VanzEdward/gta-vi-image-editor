@@ -14,6 +14,7 @@ import {
   clearCustomDossier,
 } from "./utils/storage";
 import TerminalBootScreen from "./components/TerminalBootScreen";
+import GtaStickerTray from "./components/GtaStickerTray";
 
 const PRESET_SUSPECTS = [
   {
@@ -151,6 +152,7 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState(null);
   const [mobileTab, setMobileTab] = useState("editor"); // "editor" | "docket"
   const [savedCustom, setSavedCustom] = useState(null);
+  const [isStickerTrayOpen, setIsStickerTrayOpen] = useState(false);
 
   // Audio & Visual Effects - Default to ON with user persistence
   const [musicPlaying, setMusicPlaying] = useState(() => localStorage.getItem("vcpd_music") !== "false");
@@ -432,6 +434,27 @@ export default function App() {
       // Ignore
     }
     setShowBootScreen(true);
+  };
+
+  // Handle GTA Custom Sticker Stamping onto suspect photo
+  const handleApplyGtaSticker = (newImageUrl, stickerName) => {
+    setCurrentImage(newImageUrl);
+    setEditorKey((k) => k + 1);
+
+    // If poster is already composed, live update the canvas with the stickered photo
+    if (finalPosterUrl) {
+      renderPosterCanvas(newImageUrl, composedSuspect || suspect, false);
+    }
+
+    // If custom suspect, auto-save to IndexedDB
+    if (suspect.id === "custom") {
+      saveCustomDossier({
+        suspect,
+        currentImage: newImageUrl,
+        finalPosterUrl,
+        composedSuspect,
+      });
+    }
   };
 
   // Render Wanted Poster on Canvas
@@ -1446,6 +1469,29 @@ export default function App() {
                 ⛶ FIT PHOTO
               </button>
 
+              {/* GTA Custom Stickers Toggle Button */}
+              <button
+                onClick={() => {
+                  playClickSound();
+                  setIsStickerTrayOpen((prev) => !prev);
+                }}
+                title="Toggle GTA VI Custom Sticker Pack (WASTED, BUSTED, Aviator Shades, Gold Chain, Badges)"
+                style={{
+                  padding: "6px 12px",
+                  minHeight: "36px",
+                  backgroundColor: isStickerTrayOpen ? "rgba(255, 0, 122, 0.25)" : "rgba(255, 0, 122, 0.12)",
+                  border: `1px solid ${isStickerTrayOpen ? "var(--neon-pink)" : "rgba(255, 0, 122, 0.5)"}`,
+                  borderRadius: "4px",
+                  color: "var(--neon-pink)",
+                  fontSize: "11px",
+                  fontWeight: "800",
+                  cursor: "pointer",
+                  boxShadow: isStickerTrayOpen ? "0 0 10px rgba(255, 0, 122, 0.4)" : "none",
+                }}
+              >
+                🎨 {isStickerTrayOpen ? "HIDE STICKERS" : "GTA STICKERS"}
+              </button>
+
               <button
                 onClick={handleEditorCancel}
                 title="Reset all edits to original photo"
@@ -1465,6 +1511,16 @@ export default function App() {
               </button>
             </div>
           </div>
+
+          {/* GTA VI Custom Sticker Pack Drawer */}
+          <GtaStickerTray
+            currentImage={editorRef.current?.editor?.getImage() || currentImage}
+            onApplySticker={handleApplyGtaSticker}
+            onResetPhoto={handleEditorCancel}
+            isOpen={isStickerTrayOpen}
+            setIsOpen={setIsStickerTrayOpen}
+            showToast={showToast}
+          />
 
           {/* The React Image Editor Container */}
           <div
