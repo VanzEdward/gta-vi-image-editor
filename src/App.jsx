@@ -142,6 +142,7 @@ export default function App() {
   const [composedSuspect, setComposedSuspect] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
+  const [mobileTab, setMobileTab] = useState("editor"); // "editor" | "docket"
 
   // Audio & Visual Effects
   const [musicPlaying, setMusicPlaying] = useState(false);
@@ -671,7 +672,7 @@ export default function App() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", padding: "16px clamp(12px, 3vw, 28px)", position: "relative" }}>
+    <div className="app-container">
       {/* Optional CRT Scanlines Layer */}
       {scanlinesActive && <div className="scanlines-overlay" />}
 
@@ -680,45 +681,16 @@ export default function App() {
 
       {/* Toast Notification */}
       {toastMessage && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: "24px",
-            right: "24px",
-            zIndex: 10000,
-            backgroundColor: "#0f172a",
-            color: "#ffffff",
-            border: "1px solid var(--neon-cyan)",
-            padding: "12px 20px",
-            borderRadius: "8px",
-            boxShadow: "0 0 20px var(--neon-cyan-glow)",
-            fontSize: "14px",
-            fontWeight: "700",
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-          }}
-        >
+        <div className="mobile-toast">
           <span style={{ color: "var(--neon-cyan)" }}>✦</span>
           <span>{toastMessage}</span>
         </div>
       )}
 
       {/* ================= HUD HEADER ================= */}
-      <header
-        className="vice-panel"
-        style={{
-          padding: "16px 20px",
-          marginBottom: "14px",
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: "14px",
-        }}
-      >
+      <header className="vice-panel hud-header">
         {/* Left Title & Department Status */}
-        <div>
+        <div className="hud-title-block">
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
             <span
               className="hud-font"
@@ -760,9 +732,9 @@ export default function App() {
           <h1
             style={{
               margin: 0,
-              fontSize: "clamp(22px, 3.8vw, 34px)",
+              fontSize: "clamp(20px, 4.5vw, 34px)",
               fontWeight: "900",
-              letterSpacing: "1.5px",
+              letterSpacing: "1.2px",
               textTransform: "uppercase",
               background: "linear-gradient(90deg, #ff007a 0%, #ff529a 50%, #00f0ff 100%)",
               WebkitBackgroundClip: "text",
@@ -778,7 +750,7 @@ export default function App() {
         </div>
 
         {/* Right Atmospheric & Audio Controls Only */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
+        <div className="hud-control-group">
           {/* Synthwave Radio Toggle */}
           <button
             onClick={handleToggleMusic}
@@ -837,57 +809,24 @@ export default function App() {
       </header>
 
       {/* ================= WORKFLOW STEP INDICATOR ================= */}
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          gap: "10px",
-          padding: "8px 16px",
-          marginBottom: "14px",
-          backgroundColor: "rgba(15, 23, 42, 0.5)",
-          borderRadius: "6px",
-          border: "1px solid rgba(255, 255, 255, 0.05)",
-          fontSize: "12px",
-        }}
-      >
-        <span className="hud-font" style={{ color: "#ff007a", fontWeight: "800" }}>
+      <div className="workflow-step-indicator">
+        <span className="hud-font" style={{ color: "#ff007a", fontWeight: "800", flexShrink: 0 }}>
           ① SELECT DOSSIER
         </span>
-        <span style={{ color: "#64748b" }}>➔</span>
-        <span className="hud-font" style={{ color: "#00f0ff", fontWeight: "800" }}>
+        <span style={{ color: "#64748b", flexShrink: 0 }}>➔</span>
+        <span className="hud-font" style={{ color: "#00f0ff", fontWeight: "800", flexShrink: 0 }}>
           ② EDIT PHOTO & RAP SHEET
         </span>
-        <span style={{ color: "#64748b" }}>➔</span>
-        <span className="hud-font" style={{ color: "#fbbf24", fontWeight: "800" }}>
+        <span style={{ color: "#64748b", flexShrink: 0 }}>➔</span>
+        <span className="hud-font" style={{ color: "#fbbf24", fontWeight: "800", flexShrink: 0 }}>
           ③ COMPOSE & DOWNLOAD POSTER
         </span>
       </div>
 
       {/* ================= SUSPECT PRESETS ================= */}
-      <div
-        className="vice-panel"
-        style={{
-          padding: "12px 16px",
-          marginBottom: "16px",
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: "12px",
-        }}
-      >
+      <div className="vice-panel presets-container">
         {/* Preset Buttons */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            overflowX: "auto",
-            maxWidth: "100%",
-            paddingBottom: "4px",
-          }}
-        >
+        <div className="presets-scroll-track">
           <span className="hud-font" style={{ fontSize: "12px", color: "#64748b", fontWeight: "700", flexShrink: 0 }}>
             DOSSIER:
           </span>
@@ -920,46 +859,46 @@ export default function App() {
         </div>
 
         {/* Custom Suspect Photo Upload */}
-        <label
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "6px",
-            padding: "8px 16px",
-            backgroundColor: "rgba(0, 240, 255, 0.12)",
-            border: "1px solid var(--neon-cyan)",
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontSize: "12px",
-            fontWeight: "700",
-            color: "var(--neon-cyan)",
-            flexShrink: 0,
-          }}
-        >
+        <label className="upload-custom-btn">
           <span>📁 UPLOAD CUSTOM SUSPECT</span>
           <input type="file" accept="image/*" onChange={handleFileUpload} style={{ display: "none" }} />
         </label>
       </div>
 
-      {/* ================= MAIN GRID: RAP SHEET + EDITOR ================= */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))",
-          gap: "16px",
-          alignItems: "start",
-        }}
-      >
-        {/* Left Column: Rap Sheet Docket Controls */}
-        <div
-          className="vice-panel"
-          style={{
-            padding: "18px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "14px",
+      {/* ================= MOBILE VIEW TAB SELECTOR (< 768px) ================= */}
+      <div className="mobile-view-tabs" role="tablist" aria-label="Editor View Switcher">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobileTab === "editor"}
+          className={`mobile-tab-btn ${mobileTab === "editor" ? "active-tab-editor" : ""}`}
+          onClick={() => {
+            playClickSound();
+            setMobileTab("editor");
           }}
         >
+          <span>📸</span>
+          <span>PHOTO EDITOR</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobileTab === "docket"}
+          className={`mobile-tab-btn ${mobileTab === "docket" ? "active-tab-docket" : ""}`}
+          onClick={() => {
+            playClickSound();
+            setMobileTab("docket");
+          }}
+        >
+          <span>📑</span>
+          <span>RAP SHEET DOCKET</span>
+          <span className="mobile-stars-badge">{"★".repeat(suspect.stars)}</span>
+        </button>
+      </div>
+
+      {/* ================= MAIN GRID: RAP SHEET + EDITOR ================= */}
+      <div className="main-workspace-grid">
+        <div className={`vice-panel docket-column ${mobileTab === "docket" ? "mobile-visible" : "mobile-hidden"}`}>
           <div
             style={{
               display: "flex",
@@ -1215,7 +1154,7 @@ export default function App() {
         </div>
 
         {/* Right Column: React Image Editor */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        <div className={`editor-column ${mobileTab === "editor" ? "mobile-visible" : "mobile-hidden"}`}>
           {/* Tool Guidance Bar with Reset Shortcut */}
           <div
             style={{
@@ -1244,7 +1183,8 @@ export default function App() {
                 onClick={handleFitToScreen}
                 title="Fit and center image inside workspace"
                 style={{
-                  padding: "4px 10px",
+                  padding: "6px 12px",
+                  minHeight: "36px",
                   backgroundColor: "rgba(0, 240, 255, 0.12)",
                   border: "1px solid rgba(0, 240, 255, 0.4)",
                   borderRadius: "4px",
@@ -1261,7 +1201,8 @@ export default function App() {
                 onClick={handleEditorCancel}
                 title="Reset all edits to original photo"
                 style={{
-                  padding: "4px 10px",
+                  padding: "6px 12px",
+                  minHeight: "36px",
                   backgroundColor: "rgba(239, 68, 68, 0.15)",
                   border: "1px solid rgba(239, 68, 68, 0.4)",
                   borderRadius: "4px",
@@ -1322,33 +1263,61 @@ export default function App() {
               onLoadError={() => showToast("Image load error.")}
             />
           </div>
+
+          {/* Mobile Quick Action Strip in Photo Editor view */}
+          <div className="mobile-quick-action-strip">
+            <div className="mobile-suspect-summary">
+              <div>
+                <span style={{ color: "#ffffff", fontWeight: "800" }}>{suspect.name}</span>
+                <span style={{ color: "#38bdf8", marginLeft: "6px", fontSize: "12px" }}>("{suspect.alias}")</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <span style={{ color: "#fbbf24" }}>{"★".repeat(suspect.stars)}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    playClickSound();
+                    setMobileTab("docket");
+                  }}
+                  style={{
+                    background: "none",
+                    border: "1px solid rgba(255, 0, 122, 0.4)",
+                    borderRadius: "4px",
+                    color: "var(--neon-pink)",
+                    fontSize: "11px",
+                    padding: "3px 8px",
+                    cursor: "pointer",
+                    fontWeight: "700",
+                  }}
+                >
+                  ✏️ Edit Docket
+                </button>
+              </div>
+            </div>
+
+            <div className="mobile-action-btn-group">
+              <button
+                onClick={handleComposeWantedPoster}
+                disabled={isGenerating}
+                className="mobile-compose-btn"
+              >
+                ⚡ {isGenerating ? "COMPOSING..." : "COMPOSE WANTED POSTER"}
+              </button>
+              <button
+                onClick={handleRandomizeDocket}
+                className="mobile-random-btn"
+              >
+                🎲 RANDOM CRIME
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* ================= OFFICIAL WANTED POSTER SECTION ================= */}
       {finalPosterUrl && (
-        <section
-          ref={posterSectionRef}
-          className="vice-panel"
-          style={{
-            marginTop: "28px",
-            padding: "clamp(16px, 3vw, 28px)",
-            border: "2px solid var(--neon-pink)",
-            boxShadow: "0 10px 40px var(--neon-pink-glow)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: "12px",
-              marginBottom: "18px",
-              borderBottom: "1px solid rgba(255, 0, 122, 0.3)",
-              paddingBottom: "14px",
-            }}
-          >
+        <section ref={posterSectionRef} className="vice-panel poster-preview-card">
+          <div className="poster-header-row">
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <span style={{ fontSize: "22px" }}>🚨</span>
               <h3
@@ -1366,39 +1335,17 @@ export default function App() {
             </div>
 
             {/* Clean Export Actions on Poster Card */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+            <div className="poster-actions-row">
               <button
                 onClick={handleInstantDownload}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "10px 20px",
-                  backgroundColor: "var(--neon-pink)",
-                  color: "#ffffff",
-                  border: "none",
-                  borderRadius: "6px",
-                  fontWeight: "800",
-                  fontSize: "14px",
-                  boxShadow: "0 0 15px var(--neon-pink-glow)",
-                  cursor: "pointer",
-                }}
+                className="poster-download-btn"
               >
                 💾 DOWNLOAD POSTER (.PNG)
               </button>
 
               <button
                 onClick={handleShareLink}
-                style={{
-                  padding: "10px 18px",
-                  backgroundColor: "#1e293b",
-                  border: "1px solid #334155",
-                  color: "#38bdf8",
-                  borderRadius: "6px",
-                  fontWeight: "700",
-                  fontSize: "14px",
-                  cursor: "pointer",
-                }}
+                className="poster-share-btn"
               >
                 📤 SHARE BULLETIN LINK
               </button>
