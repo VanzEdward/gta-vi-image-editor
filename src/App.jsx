@@ -1416,60 +1416,10 @@ export default function App() {
                 </div>
               </div>
 
-              <p style={{ color: "#94a3b8", fontSize: "14px", lineHeight: "1.6" }}>
+              <p style={{ color: "#94a3b8", fontSize: "14px", lineHeight: "1.6", margin: 0 }}>
                 Ready to submit! The poster contains your customized mugshot edits directly rendered from the React Image Editor,
                 with the official VCPD booking grid, barcode, threat level, and Leonida Department of Corrections seal.
               </p>
-
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "16px" }}>
-                <button
-                  onClick={handleRandomizeDocket}
-                  title="Generate a new random crime for this suspect"
-                  style={{
-                    padding: "9px 18px",
-                    backgroundColor: "#1e293b",
-                    border: "1px solid #334155",
-                    color: "#38bdf8",
-                    borderRadius: "6px",
-                    fontSize: "13px",
-                    fontWeight: "700",
-                    cursor: "pointer",
-                    transition: "background-color 0.2s ease",
-                  }}
-                >
-                  🎲 Randomize Crime
-                </button>
-                <button
-                  onClick={handleInstantDownload}
-                  style={{
-                    padding: "9px 18px",
-                    backgroundColor: "transparent",
-                    border: "1px solid var(--neon-cyan)",
-                    color: "var(--neon-cyan)",
-                    borderRadius: "6px",
-                    fontSize: "13px",
-                    fontWeight: "700",
-                    cursor: "pointer",
-                  }}
-                >
-                  ⬇️ Save Again
-                </button>
-                <button
-                  onClick={handleShareLink}
-                  style={{
-                    padding: "9px 18px",
-                    backgroundColor: "transparent",
-                    border: "1px solid #334155",
-                    color: "#94a3b8",
-                    borderRadius: "6px",
-                    fontSize: "13px",
-                    fontWeight: "700",
-                    cursor: "pointer",
-                  }}
-                >
-                  🔗 Copy Link
-                </button>
-              </div>
             </div>
           </div>
         </section>
