@@ -323,57 +323,142 @@ export default function App() {
       const starsDisplay = "★".repeat(activeSuspect.stars) + "☆".repeat(5 - activeSuspect.stars);
       ctx.fillText(starsDisplay, 500, 242);
 
-      // 5. Suspect Photo Container with Height Ruler
-      const pX = 140;
+      // 5. Suspect Photo Container (Natural Portrait Aspect Ratio Frame)
+      const pW = 480;
+      const pH = 530;
+      const pX = (1000 - pW) / 2; // 260 - centered
       const pY = 265;
-      const pW = 720;
-      const pH = 510;
 
-      ctx.fillStyle = "#000000";
+      // Dark background backdrop behind photo container
+      ctx.fillStyle = "#050811";
       ctx.fillRect(pX, pY, pW, pH);
 
-      // Draw edited photo
-      ctx.drawImage(img, pX, pY, pW, pH);
+      // Flanking Police Lineup Height Grid (Wings outside the mugshot frame)
+      const heights = ["6'4\"", "6'2\"", "6'0\"", "5'10\"", "5'8\"", "5'6\"", "5'4\""];
+      ctx.lineWidth = 1;
+      heights.forEach((h, idx) => {
+        const lineY = pY + 45 + idx * 68;
 
-      // Height Rulers on Left & Right
+        // Left wing ruler
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+        ctx.beginPath();
+        ctx.moveTo(150, lineY);
+        ctx.lineTo(pX, lineY);
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(148, 163, 184, 0.75)";
+        ctx.font = "11px 'Chakra Petch', monospace";
+        ctx.textAlign = "left";
+        ctx.fillText(h, 155, lineY - 5);
+
+        // Right wing ruler
+        ctx.beginPath();
+        ctx.moveTo(pX + pW, lineY);
+        ctx.lineTo(850, lineY);
+        ctx.stroke();
+
+        ctx.textAlign = "right";
+        ctx.fillText(h, 845, lineY - 5);
+      });
+
+      // Draw suspect photo with 100% aspect-ratio preservation (no squishing/stretching)
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(pX, pY, pW, pH);
+      ctx.clip();
+
+      const imgRatio = img.width / img.height;
+      const frameRatio = pW / pH; // 480 / 530 ≈ 0.90566
+      let drawW, drawH, drawX, drawY;
+
+      if (imgRatio > frameRatio) {
+        // Image is wider than frame (landscape/square) - match height and center horizontally
+        drawH = pH;
+        drawW = pH * imgRatio;
+        drawX = pX + (pW - drawW) / 2;
+        drawY = pY;
+      } else {
+        // Image is taller than frame (e.g., 9:16 or 3:4 portrait) - match width and align with slight top bias
+        drawW = pW;
+        drawH = pW / imgRatio;
+        drawX = pX;
+        // Bias slightly upwards (0.28) so heads/faces aren't cut off when tall 9:16 images are used
+        drawY = pY + Math.min(0, (pH - drawH) * 0.28);
+      }
+
+      ctx.drawImage(img, drawX, drawY, drawW, drawH);
+
+      // Subtle inner height ruler ticks over image edges
       ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-      ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-      ctx.font = "12px 'Chakra Petch', monospace";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+      ctx.font = "11px 'Chakra Petch', monospace";
       ctx.textAlign = "left";
 
-      const heights = ["6'4\"", "6'2\"", "6'0\"", "5'10\"", "5'8\"", "5'6\""];
       heights.forEach((h, idx) => {
-        const lineY = pY + 65 + idx * 65;
+        const lineY = pY + 45 + idx * 68;
+        // Left inner tick
         ctx.beginPath();
         ctx.moveTo(pX, lineY);
-        ctx.lineTo(pX + 50, lineY);
+        ctx.lineTo(pX + 35, lineY);
         ctx.stroke();
-        ctx.fillText(h, pX + 10, lineY - 6);
+        ctx.fillText(h, pX + 8, lineY - 5);
 
+        // Right inner tick
         ctx.beginPath();
-        ctx.moveTo(pX + pW - 50, lineY);
+        ctx.moveTo(pX + pW - 35, lineY);
         ctx.lineTo(pX + pW, lineY);
         ctx.stroke();
       });
 
-      // Photo Frame Accent
+      ctx.restore();
+
+      // Photo Frame Accent (Neon Cyan)
       ctx.strokeStyle = "#00f0ff";
       ctx.lineWidth = 3;
       ctx.strokeRect(pX, pY, pW, pH);
 
+      // Cyberpunk / Police Corner Accents (Neon Pink)
+      ctx.strokeStyle = "#ff007a";
+      ctx.lineWidth = 4;
+      const cSize = 22;
+      // Top-Left
+      ctx.beginPath();
+      ctx.moveTo(pX - 3, pY + cSize);
+      ctx.lineTo(pX - 3, pY - 3);
+      ctx.lineTo(pX + cSize, pY - 3);
+      ctx.stroke();
+      // Top-Right
+      ctx.beginPath();
+      ctx.moveTo(pX + pW + 3 - cSize, pY - 3);
+      ctx.lineTo(pX + pW + 3, pY - 3);
+      ctx.lineTo(pX + pW + 3, pY + cSize);
+      ctx.stroke();
+      // Bottom-Left
+      ctx.beginPath();
+      ctx.moveTo(pX - 3, pY + pH - cSize);
+      ctx.lineTo(pX - 3, pY + pH + 3);
+      ctx.lineTo(pX + cSize, pY + pH + 3);
+      ctx.stroke();
+      // Bottom-Right
+      ctx.beginPath();
+      ctx.moveTo(pX + pW + 3 - cSize, pY + pH + 3);
+      ctx.lineTo(pX + pW + 3, pY + pH + 3);
+      ctx.lineTo(pX + pW + 3, pY + pH + 3 - cSize);
+      ctx.stroke();
+
       // 6. Angled Warning Stamp
       ctx.save();
-      ctx.translate(pX + 160, pY + 110);
+      ctx.translate(pX + 115, pY + 75);
       ctx.rotate((-18 * Math.PI) / 180);
       ctx.strokeStyle = "#e11d48";
       ctx.lineWidth = 4;
-      ctx.strokeRect(-125, -28, 250, 56);
-      ctx.fillStyle = "rgba(225, 29, 72, 0.28)";
-      ctx.fillRect(-125, -28, 250, 56);
+      ctx.strokeRect(-110, -26, 220, 52);
+      ctx.fillStyle = "rgba(225, 29, 72, 0.32)";
+      ctx.fillRect(-110, -26, 220, 52);
       ctx.fillStyle = "#ff4d6d";
-      ctx.font = "bold 20px 'Chakra Petch', monospace";
+      ctx.font = "bold 18px 'Chakra Petch', monospace";
       ctx.textAlign = "center";
-      ctx.fillText("ARMED & DANGEROUS", 0, 8);
+      ctx.fillText("ARMED & DANGEROUS", 0, 7);
       ctx.restore();
 
       // 7. Suspect Dossier Details
