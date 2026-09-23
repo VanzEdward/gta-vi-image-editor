@@ -150,10 +150,31 @@ export default function App() {
   const [mobileTab, setMobileTab] = useState("editor"); // "editor" | "docket"
   const [savedCustom, setSavedCustom] = useState(null);
 
-  // Audio & Visual Effects
-  const [musicPlaying, setMusicPlaying] = useState(false);
-  const [scanlinesActive, setScanlinesActive] = useState(false);
+  // Audio & Visual Effects - Default to ON with user persistence
+  const [musicPlaying, setMusicPlaying] = useState(() => localStorage.getItem("vcpd_music") !== "false");
+  const [scanlinesActive, setScanlinesActive] = useState(() => localStorage.getItem("vcpd_crt") !== "false");
   const [currentTime, setCurrentTime] = useState("");
+
+  // Auto-start Vice FM synthwave music on first user interaction (browser autoplay policy requirement)
+  useEffect(() => {
+    if (localStorage.getItem("vcpd_music") !== "false") {
+      const startAudioOnFirstGesture = () => {
+        toggleSynthwaveMusic((playing) => {
+          setMusicPlaying(playing);
+        });
+      };
+
+      window.addEventListener("click", startAudioOnFirstGesture, { once: true });
+      window.addEventListener("keydown", startAudioOnFirstGesture, { once: true });
+      window.addEventListener("touchstart", startAudioOnFirstGesture, { once: true });
+
+      return () => {
+        window.removeEventListener("click", startAudioOnFirstGesture);
+        window.removeEventListener("keydown", startAudioOnFirstGesture);
+        window.removeEventListener("touchstart", startAudioOnFirstGesture);
+      };
+    }
+  }, []);
 
   // Auto-restore custom suspect session from IndexedDB on initial load or reload
   useEffect(() => {
@@ -338,11 +359,22 @@ export default function App() {
     }
   };
 
-  // Synthesizer Radio Toggle
+  // Synthesizer Radio Toggle with Persistence
   const handleToggleMusic = () => {
     playClickSound();
     toggleSynthwaveMusic((playing) => {
       setMusicPlaying(playing);
+      localStorage.setItem("vcpd_music", playing ? "true" : "false");
+    });
+  };
+
+  // CRT Scanline Toggle with Persistence
+  const handleToggleCRT = () => {
+    playClickSound();
+    setScanlinesActive((prev) => {
+      const next = !prev;
+      localStorage.setItem("vcpd_crt", next ? "true" : "false");
+      return next;
     });
   };
 
@@ -847,10 +879,7 @@ export default function App() {
 
           {/* CRT Scanline Toggle */}
           <button
-            onClick={() => {
-              playClickSound();
-              setScanlinesActive(!scanlinesActive);
-            }}
+            onClick={handleToggleCRT}
             style={{
               padding: "8px 14px",
               fontSize: "13px",
@@ -865,10 +894,10 @@ export default function App() {
             CRT: {scanlinesActive ? "ON" : "OFF"}
           </button>
 
-          {/* Radio Dispatch Cue */}
+          {/* Radio Dispatch Cue (10-99 Police Code for Wanted Suspect Alert) */}
           <button
             onClick={() => playDispatchSound()}
-            title="Play Police Radio Beep"
+            title="10-99 Police Ten-Code: High-Priority Wanted Suspect Dispatch Alert"
             style={{
               padding: "8px 12px",
               fontSize: "13px",
