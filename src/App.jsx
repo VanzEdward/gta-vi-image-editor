@@ -7,6 +7,11 @@ import {
   playDispatchSound,
   toggleSynthwaveMusic,
 } from "./utils/audio";
+import {
+  saveCustomDossier,
+  loadCustomDossier,
+  clearCustomDossier,
+} from "./utils/storage";
 
 const PRESET_SUSPECTS = [
   {
@@ -143,11 +148,54 @@ export default function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const [mobileTab, setMobileTab] = useState("editor"); // "editor" | "docket"
+  const [savedCustom, setSavedCustom] = useState(null);
 
   // Audio & Visual Effects
   const [musicPlaying, setMusicPlaying] = useState(false);
   const [scanlinesActive, setScanlinesActive] = useState(false);
   const [currentTime, setCurrentTime] = useState("");
+
+  // Auto-restore custom suspect session from IndexedDB on initial load or reload
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hasUrlPreset = params.get("preset");
+
+    loadCustomDossier().then((saved) => {
+      if (saved && saved.suspect) {
+        setSavedCustom(saved);
+        const wasCustom = localStorage.getItem("vcpd_active_tab_type") === "custom";
+        if (wasCustom && !hasUrlPreset) {
+          setSuspect(saved.suspect);
+          if (saved.currentImage) setCurrentImage(saved.currentImage);
+          if (saved.finalPosterUrl) setFinalPosterUrl(saved.finalPosterUrl);
+          if (saved.composedSuspect) setComposedSuspect(saved.composedSuspect);
+          setEditorKey((k) => k + 1);
+          showToast("⚡ Restored your custom suspect session!");
+        }
+      }
+    });
+  }, []);
+
+  // Auto-save custom suspect state to IndexedDB whenever modified
+  useEffect(() => {
+    if (suspect.id === "custom") {
+      const timer = setTimeout(() => {
+        saveCustomDossier({
+          suspect,
+          currentImage,
+          finalPosterUrl,
+          composedSuspect,
+        });
+        setSavedCustom({
+          suspect,
+          currentImage,
+          finalPosterUrl,
+          composedSuspect,
+        });
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [suspect, currentImage, finalPosterUrl, composedSuspect]);
 
   // Live Vice City Digital Clock (EDT / UTC-4)
   useEffect(() => {
@@ -180,6 +228,20 @@ export default function App() {
     setEditorKey((k) => k + 1);
     setFinalPosterUrl(null);
     setComposedSuspect(null);
+    localStorage.setItem("vcpd_active_tab_type", preset.id);
+  };
+
+  // Switch to Saved Custom Suspect
+  const selectCustomPreset = () => {
+    if (!savedCustom) return;
+    playClickSound();
+    setSuspect(savedCustom.suspect);
+    if (savedCustom.currentImage) setCurrentImage(savedCustom.currentImage);
+    setEditorKey((k) => k + 1);
+    setFinalPosterUrl(savedCustom.finalPosterUrl || null);
+    setComposedSuspect(savedCustom.composedSuspect || null);
+    localStorage.setItem("vcpd_active_tab_type", "custom");
+    showToast("Loaded your saved custom suspect!");
   };
 
   // Custom Suspect Upload
@@ -189,19 +251,34 @@ export default function App() {
       playClickSound();
       const reader = new FileReader();
       reader.onload = () => {
-        setCurrentImage(reader.result);
-        setEditorKey((k) => k + 1);
-        setSuspect((prev) => ({
-          ...prev,
+        const uploadedSuspect = {
+          id: "custom",
+          url: reader.result,
           name: "NEW UNIDENTIFIED SUSPECT",
           alias: "UNKNOWN SUBJECT",
           bookingNo: `VCPD-2026-${Math.floor(1000 + Math.random() * 9000)}X`,
-        }));
+          charge: "Armed Bank Robbery & Evading VCPD",
+          bounty: 750000,
+          stars: 4,
+          location: "Ocean Beach / Washington Ave",
+          dangerLevel: "ARMED & EXTREMELY DANGEROUS",
+        };
+        setCurrentImage(reader.result);
+        setEditorKey((k) => k + 1);
+        setSuspect(uploadedSuspect);
         setFinalPosterUrl(null);
         setComposedSuspect(null);
-        showToast("Custom photo loaded into editor!");
+        setSavedCustom({ suspect: uploadedSuspect, currentImage: reader.result });
+        localStorage.setItem("vcpd_active_tab_type", "custom");
+        saveCustomDossier({
+          suspect: uploadedSuspect,
+          currentImage: reader.result,
+        }).then(() => {
+          showToast("Custom photo uploaded and saved locally!");
+        });
       };
       reader.readAsDataURL(file);
+      e.target.value = "";
     }
   };
 
@@ -856,11 +933,65 @@ export default function App() {
               </button>
             );
           })}
+
+          {/* Saved Custom Suspect Quick Switcher Button */}
+          {savedCustom && (
+            <div style={{ display: "inline-flex", alignItems: "center", position: "relative", flexShrink: 0 }}>
+              <button
+                type="button"
+                onClick={selectCustomPreset}
+                style={{
+                  padding: "7px 13px",
+                  paddingRight: "28px",
+                  fontSize: "12px",
+                  fontWeight: "700",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  border: "1px solid",
+                  borderColor: suspect.id === "custom" ? "var(--neon-cyan)" : "rgba(0, 240, 255, 0.4)",
+                  backgroundColor: suspect.id === "custom" ? "rgba(0, 240, 255, 0.22)" : "#0f172a",
+                  color: suspect.id === "custom" ? "#ffffff" : "var(--neon-cyan)",
+                  boxShadow: suspect.id === "custom" ? "0 0 10px var(--neon-cyan-glow)" : "none",
+                }}
+                title="Switch to your saved custom suspect"
+              >
+                ★ {savedCustom.suspect?.name && savedCustom.suspect.name !== "NEW UNIDENTIFIED SUSPECT" ? savedCustom.suspect.name : "MY CUSTOM SUSPECT"}
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  playClickSound();
+                  clearCustomDossier();
+                  setSavedCustom(null);
+                  if (suspect.id === "custom") {
+                    selectPreset(PRESET_SUSPECTS[0]);
+                  }
+                  showToast("Saved custom suspect removed from local storage.");
+                }}
+                title="Delete saved custom suspect"
+                style={{
+                  position: "absolute",
+                  right: "6px",
+                  background: "none",
+                  border: "none",
+                  color: "#94a3b8",
+                  fontSize: "13px",
+                  cursor: "pointer",
+                  padding: "2px",
+                  lineHeight: 1,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Custom Suspect Photo Upload */}
-        <label className="upload-custom-btn">
-          <span>📁 UPLOAD CUSTOM SUSPECT</span>
+        <label className={`upload-custom-btn ${suspect.id === "custom" ? "active-custom-dossier" : ""}`}>
+          <span>📁 {suspect.id === "custom" ? "RE-UPLOAD CUSTOM SUSPECT" : "UPLOAD CUSTOM SUSPECT"}</span>
           <input type="file" accept="image/*" onChange={handleFileUpload} style={{ display: "none" }} />
         </label>
       </div>

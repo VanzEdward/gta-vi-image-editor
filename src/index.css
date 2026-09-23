@@ -332,6 +332,13 @@ button, a, input, select, label {
   box-shadow: 0 0 12px var(--neon-cyan-glow);
 }
 
+.upload-custom-btn.active-custom-dossier {
+  background-color: rgba(0, 240, 255, 0.25);
+  border-color: #00f0ff;
+  box-shadow: 0 0 14px var(--neon-cyan-glow);
+  color: #ffffff;
+}
+
 /* ================= MOBILE VIEW TAB SWITCHER ================= */
 .mobile-view-tabs {
   display: none; /* hidden by default on desktop */
