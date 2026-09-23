@@ -6,17 +6,19 @@
 [![React](https://img.shields.io/badge/React-18.3.1-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Unlayer React Image Editor](https://img.shields.io/badge/Powered%20By-React%20Image%20Editor-ff007a?logo=unlayer)](https://www.npmjs.com/package/@unlayer/react-image-editor)
+[![Deployed on Render](https://img.shields.io/badge/Live%20Demo-Render-46E3B7?logo=render&logoColor=white)](https://gta-vi-image-editor.onrender.com/)
 [![Web Audio API](https://img.shields.io/badge/Audio-Synthesized%20Web%20Audio-00f0ff)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
 [![Storage](https://img.shields.io/badge/Storage-IndexedDB%20%2B%20sessionStorage-fbbf24)](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
-## 🌐 Live Demo & Deployment
+## 🌐 Live Demo & Submission Links
 
-* **Live Demo:** `https://gta-vi-image-editor.onrender.com` *(Replace with your active Render URL)*
-* **Repository:** `https://github.com/VanzEdward/gta-vi-image-editor`
-* **Hashtag:** `#BuiltWithImageEditor`
+* 🚀 **Live Production Link:** **[https://gta-vi-image-editor.onrender.com](https://gta-vi-image-editor.onrender.com/)**
+* 📦 **Public GitHub Repository:** **[https://github.com/VanzEdward/gta-vi-image-editor](https://github.com/VanzEdward/gta-vi-image-editor)**
+* 🏷️ **Official Challenge Tag:** `#BuiltWithImageEditor`
+* 🏢 **Organized By:** [Unlayer](https://unlayer.com)
 
 ---
 
@@ -172,7 +174,7 @@ This repository includes a pre-configured **`render.yaml`** file for 1-click dep
      * **Source:** `/*`
      * **Destination:** `/index.html`
 6. Click **Create Static Site**.
-7. Render will build and deploy your site in ~1 minute and provide you with a live URL (e.g. `https://gta-vi-image-editor.onrender.com`)!
+7. The site is live and deployed on Render: **[https://gta-vi-image-editor.onrender.com](https://gta-vi-image-editor.onrender.com/)**.
 
 ---
 
@@ -181,6 +183,7 @@ This repository includes a pre-configured **`render.yaml`** file for 1-click dep
 ```text
 gta-editor/
 ├── public/
+│   ├── favicon.svg              # Custom GTA VI VCPD neon tab icon & PWA asset
 │   ├── images/                  # Preset suspect mugshots (Lucia, Jason)
 │   └── test_poster.html         # Canvas standalone test harness
 ├── src/
