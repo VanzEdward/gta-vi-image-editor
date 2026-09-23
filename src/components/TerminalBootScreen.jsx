@@ -17,6 +17,17 @@ export default function TerminalBootScreen({ onEnter }) {
   const [isEntering, setIsEntering] = useState(false);
   const [currentTime, setCurrentTime] = useState("");
   const enteredRef = useRef(false);
+  const logContainerRef = useRef(null);
+
+  // Auto-scroll terminal log to bottom as messages appear so text naturally glides upward
+  useEffect(() => {
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTo({
+        top: logContainerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [visibleCount]);
 
   // Live VCPD Clock
   useEffect(() => {
@@ -172,7 +183,7 @@ export default function TerminalBootScreen({ onEnter }) {
             <span>SECURE PROTOCOL v6.24</span>
           </div>
 
-          <div className="vcpd-boot-console-log">
+          <div className="vcpd-boot-console-log" ref={logContainerRef}>
             {BOOT_LOG_SEQUENCE.slice(0, visibleCount).map((log, idx) => (
               <div key={idx} className="vcpd-boot-log-line">
                 <span className="vcpd-boot-log-time">[{log.time}]</span>
@@ -244,7 +255,7 @@ export default function TerminalBootScreen({ onEnter }) {
         <div className="vcpd-boot-footer-stars">
           <span>THREAT LEVEL: ★★★★★ PRIORITY WANTED MONITORING ACTIVE</span>
         </div>
-        <div>
+        <div className="vcpd-boot-footer-extra">
           <span>AUTHORIZED LAW ENFORCEMENT & PUBLIC EVIDENCE PORTAL</span>
         </div>
       </footer>
