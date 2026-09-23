@@ -6,6 +6,7 @@ import {
   playShutterSound,
   playDispatchSound,
   toggleSynthwaveMusic,
+  startSynthwaveMusic,
 } from "./utils/audio";
 import {
   saveCustomDossier,
@@ -174,7 +175,7 @@ export default function App() {
   useEffect(() => {
     if (localStorage.getItem("vcpd_music") !== "false") {
       const startAudioOnFirstGesture = () => {
-        toggleSynthwaveMusic((playing) => {
+        startSynthwaveMusic((playing) => {
           setMusicPlaying(playing);
           setAudioStarted(playing);
         });
@@ -413,9 +414,9 @@ export default function App() {
     }
     setShowBootScreen(false);
 
-    // Start Vice FM radio immediately since direct user interaction has unlocked audio
+    // Ensure Vice FM radio is playing since direct user interaction has unlocked audio
     if (localStorage.getItem("vcpd_music") !== "false") {
-      toggleSynthwaveMusic((playing) => {
+      startSynthwaveMusic((playing) => {
         setMusicPlaying(playing);
         setAudioStarted(playing);
       });

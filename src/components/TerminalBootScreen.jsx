@@ -3,13 +3,13 @@ import "./TerminalBootScreen.css";
 import { playTerminalKeySound, playTerminalAccessSound } from "../utils/audio";
 
 const BOOT_LOG_SEQUENCE = [
-  { time: "00:01:02", text: "INITIALIZING VCPD CENTRAL MAINFRAME KERNEL v6.24.9...", tag: "[OK]", type: "ok" },
-  { time: "00:01:03", text: "CONNECTING ENCRYPTED TUNNEL: LEONIDA STATE CJIS NETWORK...", tag: "[SECURE]", type: "sec" },
-  { time: "00:01:04", text: "CLEARANCE VERIFICATION: DETECTIVE BADGE AUTHORIZED...", tag: "[LEVEL 5]", type: "ok" },
-  { time: "00:01:05", text: "MOUNTING CRIMINAL DOSSIERS & LOCAL EVIDENCE CACHE...", tag: "[5 MOUNTED]", type: "sec" },
-  { time: "00:01:06", text: "ALLOCATING 1000x1400 HD FORENSIC CANVAS COMPOSITOR...", tag: "[ARMED]", type: "ok" },
-  { time: "00:01:07", text: "ACTIVE THREAT MONITOR: 10-99 HIGH PRIORITY WANTED ALERT...", tag: "[ARMED]", type: "warn" },
-  { time: "00:01:08", text: "ALL SYSTEMS OPERATIONAL. AWAITING DETECTIVE AUTHORIZATION.", tag: "[STANDBY]", type: "warn" },
+  { time: "00:01:02", text: "INITIALIZING VCPD CENTRAL MAINFRAME KERNEL v6.24.9...", tag: "[OK]", type: "ok", delay: 550 },
+  { time: "00:01:03", text: "CONNECTING ENCRYPTED TUNNEL: LEONIDA STATE CJIS NETWORK...", tag: "[SECURE]", type: "sec", delay: 650 },
+  { time: "00:01:04", text: "CLEARANCE VERIFICATION: DETECTIVE BADGE AUTHORIZED...", tag: "[LEVEL 5]", type: "ok", delay: 550 },
+  { time: "00:01:05", text: "MOUNTING CRIMINAL DOSSIERS & LOCAL EVIDENCE CACHE...", tag: "[5 MOUNTED]", type: "sec", delay: 600 },
+  { time: "00:01:06", text: "ALLOCATING 1000x1400 HD FORENSIC CANVAS COMPOSITOR...", tag: "[ARMED]", type: "ok", delay: 600 },
+  { time: "00:01:07", text: "ACTIVE THREAT MONITOR: 10-99 HIGH PRIORITY WANTED ALERT...", tag: "[ARMED]", type: "warn", delay: 550 },
+  { time: "00:01:08", text: "ALL SYSTEMS OPERATIONAL. 100% COMPLETE. TERMINAL READY.", tag: "[READY]", type: "ok", delay: 500 },
 ];
 
 export default function TerminalBootScreen({ onEnter }) {
@@ -36,9 +36,10 @@ export default function TerminalBootScreen({ onEnter }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Sequential typing/log effect
+  // Sequential typing/log effect with realistic boot pacing
   useEffect(() => {
     if (visibleCount < BOOT_LOG_SEQUENCE.length) {
+      const stepDelay = BOOT_LOG_SEQUENCE[visibleCount]?.delay || 550;
       const timer = setTimeout(() => {
         setVisibleCount((prev) => {
           const next = prev + 1;
@@ -49,10 +50,12 @@ export default function TerminalBootScreen({ onEnter }) {
           }
           return next;
         });
-      }, 160);
+      }, stepDelay);
       return () => clearTimeout(timer);
     }
   }, [visibleCount]);
+
+  const isBootComplete = visibleCount >= BOOT_LOG_SEQUENCE.length;
 
   // Handle entry to main app
   const handleEnter = () => {
@@ -74,14 +77,24 @@ export default function TerminalBootScreen({ onEnter }) {
   // Keyboard shortcut listener (Enter, Space, Escape)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === "Enter" || e.key === " " || e.key === "Escape") {
+      // Escape allows skipping anytime
+      if (e.key === "Escape") {
         e.preventDefault();
         handleEnter();
+        return;
+      }
+
+      // Enter or Space only triggers once boot is 100% complete
+      if (e.key === "Enter" || e.key === " ") {
+        if (isBootComplete) {
+          e.preventDefault();
+          handleEnter();
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [isBootComplete]);
 
   const progressPercent = Math.min(
     100,
@@ -198,19 +211,28 @@ export default function TerminalBootScreen({ onEnter }) {
           </div>
         </div>
 
-        {/* Action Button */}
+        {/* Action Button: Only appears when booting reaches 100% */}
         <div className="vcpd-boot-actions">
-          <button
-            onClick={handleEnter}
-            className="vcpd-boot-enter-btn"
-            id="vcpd-boot-enter-btn"
-          >
-            <span>⚡ ACCESS SUSPECT DATABASE & LAUNCH LAB</span>
-            <span className="vcpd-boot-btn-arrow">▶</span>
-          </button>
-          <span className="vcpd-boot-hint">
-            [ PRESS ENTER OR CLICK ANYWHERE TO INITIALIZE ]
-          </span>
+          {isBootComplete ? (
+            <div className="vcpd-boot-cta-container">
+              <button
+                onClick={handleEnter}
+                className="vcpd-boot-enter-btn"
+                id="vcpd-boot-enter-btn"
+              >
+                <span>⚡ ACCESS SUSPECT DATABASE & LAUNCH LAB</span>
+                <span className="vcpd-boot-btn-arrow">▶</span>
+              </button>
+              <span className="vcpd-boot-hint">
+                [ PRESS ENTER OR CLICK TO INITIALIZE ]
+              </span>
+            </div>
+          ) : (
+            <div className="vcpd-boot-loading-status">
+              <span className="vcpd-boot-spinner-pulse">●</span>
+              <span>INITIALIZING SECURE MAINFRAME... PLEASE STAND BY ({progressPercent}%)</span>
+            </div>
+          )}
         </div>
       </main>
 

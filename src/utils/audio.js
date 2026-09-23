@@ -197,18 +197,20 @@ export async function playDispatchSound() {
   }
 }
 
-// 80s Vice Synthwave Ambient Loop Generator
-export function toggleSynthwaveMusic(callback) {
+// Check if music is actively playing
+export function isSynthwaveMusicPlaying() {
+  return isSynthPlaying;
+}
+
+// Explicitly start Synthwave Music (idempotent: will NOT toggle off if already running)
+export function startSynthwaveMusic(callback) {
+  if (isSynthPlaying) {
+    if (callback) callback(true);
+    return true;
+  }
+
   const ctx = getAudioContext();
   if (!ctx) return false;
-
-  if (isSynthPlaying) {
-    if (synthTimer) clearInterval(synthTimer);
-    synthTimer = null;
-    isSynthPlaying = false;
-    if (callback) callback(false);
-    return false;
-  }
 
   isSynthPlaying = true;
   if (callback) callback(true);
@@ -222,6 +224,7 @@ export function toggleSynthwaveMusic(callback) {
   ];
 
   let step = 0;
+  if (synthTimer) clearInterval(synthTimer);
   synthTimer = setInterval(() => {
     if (!isSynthPlaying) return;
     try {
@@ -269,6 +272,24 @@ export function toggleSynthwaveMusic(callback) {
   }, 190);
 
   return true;
+}
+
+// Explicitly stop Synthwave Music
+export function stopSynthwaveMusic(callback) {
+  if (synthTimer) clearInterval(synthTimer);
+  synthTimer = null;
+  isSynthPlaying = false;
+  if (callback) callback(false);
+  return false;
+}
+
+// 80s Vice Synthwave Ambient Loop Generator - Toggle
+export function toggleSynthwaveMusic(callback) {
+  if (isSynthPlaying) {
+    return stopSynthwaveMusic(callback);
+  } else {
+    return startSynthwaveMusic(callback);
+  }
 }
 
 // Terminal Key blip sound
