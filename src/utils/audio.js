@@ -270,3 +270,77 @@ export function toggleSynthwaveMusic(callback) {
 
   return true;
 }
+
+// Terminal Key blip sound
+export function playTerminalKeySound() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.02);
+
+    gain.gain.setValueAtTime(0.04, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.02);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start();
+    osc.stop(ctx.currentTime + 0.02);
+  } catch {
+    // Ignore audio errors
+  }
+}
+
+// Terminal Authorization & Access Sound (Tri-tone cyber chime + bass confirmation punch)
+export async function playTerminalAccessSound() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') {
+      await ctx.resume();
+    }
+
+    const t = ctx.currentTime;
+
+    // Ascending electronic cyber chord (520Hz -> 780Hz -> 1040Hz)
+    [520, 780, 1040].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const st = t + idx * 0.07;
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, st);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.25, st + 0.14);
+
+      gain.gain.setValueAtTime(0.18, st);
+      gain.gain.exponentialRampToValueAtTime(0.001, st + 0.16);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(st);
+      osc.stop(st + 0.16);
+    });
+
+    // Sub-bass confirmation punch (90Hz -> 30Hz)
+    const subOsc = ctx.createOscillator();
+    const subGain = ctx.createGain();
+    subOsc.type = 'triangle';
+    subOsc.frequency.setValueAtTime(90, t + 0.1);
+    subOsc.frequency.exponentialRampToValueAtTime(32, t + 0.45);
+    subGain.gain.setValueAtTime(0.22, t + 0.1);
+    subGain.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+    subOsc.connect(subGain);
+    subGain.connect(ctx.destination);
+    subOsc.start(t + 0.1);
+    subOsc.stop(t + 0.45);
+  } catch {
+    // Ignore audio errors
+  }
+}
+

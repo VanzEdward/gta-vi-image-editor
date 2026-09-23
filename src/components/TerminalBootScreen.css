@@ -1,0 +1,467 @@
+/* VCPD Terminal Boot Screen Styles */
+.vcpd-boot-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background-color: #030712;
+  background: radial-gradient(circle at 50% 45%, #0b1528 0%, #030712 90%);
+  color: #00f0ff;
+  font-family: 'Share Tech Mono', 'Courier New', Courier, monospace;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  user-select: none;
+  box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.95);
+  transition: opacity 0.45s ease-out, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), filter 0.45s ease-out;
+}
+
+.vcpd-boot-overlay.is-entering {
+  opacity: 0;
+  transform: scale(1.05);
+  filter: brightness(2.2) contrast(1.4) blur(4px);
+  pointer-events: none;
+}
+
+/* CRT Scanlines and Glass Curve */
+.vcpd-boot-crt-scanlines {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.35) 50%
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0.65;
+}
+
+.vcpd-boot-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, transparent 60%, rgba(0, 0, 0, 0.85) 100%);
+  pointer-events: none;
+  z-index: 11;
+}
+
+/* Header Bar */
+.vcpd-boot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.25);
+  background: rgba(3, 7, 18, 0.8);
+  backdrop-filter: blur(8px);
+  z-index: 20;
+}
+
+.vcpd-boot-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vcpd-boot-badge-icon {
+  font-size: 20px;
+  filter: drop-shadow(0 0 6px #fbbf24);
+}
+
+.vcpd-boot-header-title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #f1f5f9;
+  text-transform: uppercase;
+}
+
+.vcpd-boot-indicators {
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.vcpd-boot-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #94a3b8;
+}
+
+.vcpd-boot-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.vcpd-boot-dot.green {
+  background-color: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+  animation: pulseDot 1.4s infinite ease-in-out;
+}
+
+.vcpd-boot-dot.pink {
+  background-color: #ff007a;
+  box-shadow: 0 0 8px #ff007a;
+  animation: pulseDot 1.4s infinite ease-in-out 0.4s;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.8); }
+}
+
+.vcpd-boot-skip-btn {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: #94a3b8;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.vcpd-boot-skip-btn:hover {
+  border-color: #00f0ff;
+  color: #00f0ff;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+}
+
+/* Center Content */
+.vcpd-boot-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+  z-index: 20;
+}
+
+/* Emblem & Department Seal */
+.vcpd-boot-emblem-wrap {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vcpd-boot-radar-ring {
+  position: absolute;
+  inset: -10px;
+  border: 1px dashed rgba(0, 240, 255, 0.4);
+  border-radius: 50%;
+  animation: radarSpin 12s linear infinite;
+}
+
+.vcpd-boot-radar-ring-inner {
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(255, 0, 122, 0.3);
+  border-radius: 50%;
+  animation: radarSpin 8s linear infinite reverse;
+}
+
+@keyframes radarSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.vcpd-boot-badge-shield {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(0, 240, 255, 0.15));
+  border: 2px solid #fbbf24;
+  border-radius: 50% 50% 50% 50% / 15% 15% 85% 85%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 25px rgba(251, 191, 36, 0.4), inset 0 0 15px rgba(0, 240, 255, 0.3);
+}
+
+.vcpd-boot-badge-stars {
+  color: #fbbf24;
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-shadow: 0 0 8px #fbbf24;
+}
+
+.vcpd-boot-badge-text {
+  font-size: 11px;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 1px;
+  text-shadow: 0 0 6px #00f0ff;
+}
+
+/* Title Section */
+.vcpd-boot-titles {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.vcpd-boot-main-title {
+  font-size: clamp(20px, 4vw, 32px);
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: #ffffff;
+  text-shadow: 0 0 15px rgba(0, 240, 255, 0.6), 0 0 30px rgba(255, 0, 122, 0.4);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.vcpd-boot-sub-title {
+  font-size: clamp(11px, 2vw, 13px);
+  color: #38bdf8;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+/* Console Box */
+.vcpd-boot-console-box {
+  width: 100%;
+  background: rgba(3, 7, 18, 0.85);
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  border-radius: 8px;
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.15), inset 0 0 20px rgba(0, 240, 255, 0.05);
+  padding: 16px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.vcpd-boot-console-box::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #ff007a, #00f0ff, #fbbf24);
+}
+
+.vcpd-boot-console-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: #64748b;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.vcpd-boot-console-log {
+  min-height: 180px;
+  max-height: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: clamp(11px, 1.8vw, 13px);
+  line-height: 1.5;
+  color: #38bdf8;
+}
+
+.vcpd-boot-log-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  animation: lineFadeIn 0.15s ease-out forwards;
+}
+
+@keyframes lineFadeIn {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.vcpd-boot-log-time {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.vcpd-boot-log-prefix {
+  color: #ff007a;
+  font-weight: 700;
+}
+
+.vcpd-boot-log-text {
+  color: #e2e8f0;
+}
+
+.vcpd-boot-log-tag-ok {
+  color: #22c55e;
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+}
+
+.vcpd-boot-log-tag-warn {
+  color: #fbbf24;
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(251, 191, 36, 0.6);
+}
+
+.vcpd-boot-log-tag-sec {
+  color: #00f0ff;
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.6);
+}
+
+.vcpd-boot-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 15px;
+  background-color: #00f0ff;
+  margin-left: 4px;
+  vertical-align: middle;
+  animation: blinkCursor 0.8s infinite steps(2);
+  box-shadow: 0 0 6px #00f0ff;
+}
+
+@keyframes blinkCursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Progress bar inside console */
+.vcpd-boot-progress-wrap {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.vcpd-boot-progress-track {
+  flex: 1;
+  height: 6px;
+  background: #0f172a;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 240, 255, 0.3);
+}
+
+.vcpd-boot-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff007a, #00f0ff);
+  box-shadow: 0 0 8px #00f0ff;
+  transition: width 0.25s ease-out;
+}
+
+/* Action Area */
+.vcpd-boot-actions {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.vcpd-boot-enter-btn {
+  position: relative;
+  background: linear-gradient(135deg, rgba(255, 0, 122, 0.25), rgba(0, 240, 255, 0.3));
+  border: 2px solid #00f0ff;
+  color: #ffffff;
+  padding: 14px 36px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: clamp(13px, 2.5vw, 16px);
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.5), inset 0 0 15px rgba(255, 0, 122, 0.3);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vcpd-boot-enter-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  background: linear-gradient(135deg, rgba(255, 0, 122, 0.4), rgba(0, 240, 255, 0.45));
+  border-color: #ff007a;
+  box-shadow: 0 0 35px rgba(255, 0, 122, 0.7), inset 0 0 20px rgba(0, 240, 255, 0.5);
+}
+
+.vcpd-boot-enter-btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.vcpd-boot-btn-arrow {
+  color: #fbbf24;
+  font-size: 18px;
+  animation: pulseArrow 1s infinite alternate;
+}
+
+@keyframes pulseArrow {
+  from { transform: translateX(0); }
+  to { transform: translateX(5px); }
+}
+
+.vcpd-boot-hint {
+  font-size: 11px;
+  color: #64748b;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+/* Footer Telemetry */
+.vcpd-boot-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  border-top: 1px solid rgba(0, 240, 255, 0.2);
+  background: rgba(3, 7, 18, 0.8);
+  font-size: 10px;
+  color: #64748b;
+  letter-spacing: 1px;
+  z-index: 20;
+}
+
+.vcpd-boot-footer-stars {
+  color: #fbbf24;
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .vcpd-boot-header {
+    padding: 12px 16px;
+  }
+  .vcpd-boot-indicators {
+    display: none;
+  }
+  .vcpd-boot-console-box {
+    padding: 12px 14px;
+  }
+  .vcpd-boot-console-log {
+    min-height: 150px;
+  }
+  .vcpd-boot-enter-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 20px;
+  }
+  .vcpd-boot-footer {
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 16px;
+    text-align: center;
+  }
+}

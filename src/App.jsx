@@ -12,6 +12,7 @@ import {
   loadCustomDossier,
   clearCustomDossier,
 } from "./utils/storage";
+import TerminalBootScreen from "./components/TerminalBootScreen";
 
 const PRESET_SUSPECTS = [
   {
@@ -157,6 +158,17 @@ export default function App() {
   const [scanlinesActive, setScanlinesActive] = useState(() => localStorage.getItem("vcpd_crt") !== "false");
   const [dispatching, setDispatching] = useState(false);
   const [currentTime, setCurrentTime] = useState("");
+
+  // VCPD Terminal Boot Animation (Concept 2: Classified Mainframe)
+  // Shows on first visit or when closing tab and reopening
+  // Persisted in sessionStorage: once entered, refreshing the page stays on workspace without rebooting
+  const [showBootScreen, setShowBootScreen] = useState(() => {
+    try {
+      return sessionStorage.getItem("vcpd_boot_completed") !== "true";
+    } catch {
+      return false;
+    }
+  });
 
   // Auto-start Vice FM synthwave music on first user interaction (browser autoplay policy requirement)
   useEffect(() => {
@@ -390,6 +402,35 @@ export default function App() {
     playDispatchSound();
     showToast("📻 VCPD DISPATCH: Code 10-99 priority alert broadcasted!");
     setTimeout(() => setDispatching(false), 850);
+  };
+
+  // Handle Terminal Boot Screen Entry
+  const handleBootEnter = () => {
+    try {
+      sessionStorage.setItem("vcpd_boot_completed", "true");
+    } catch {
+      // Ignore
+    }
+    setShowBootScreen(false);
+
+    // Start Vice FM radio immediately since direct user interaction has unlocked audio
+    if (localStorage.getItem("vcpd_music") !== "false") {
+      toggleSynthwaveMusic((playing) => {
+        setMusicPlaying(playing);
+        setAudioStarted(playing);
+      });
+    }
+  };
+
+  // Re-run Terminal Boot Screen manually
+  const handleRebootTerminal = () => {
+    playClickSound();
+    try {
+      sessionStorage.removeItem("vcpd_boot_completed");
+    } catch {
+      // Ignore
+    }
+    setShowBootScreen(true);
   };
 
   // Render Wanted Poster on Canvas
@@ -796,6 +837,9 @@ export default function App() {
 
   return (
     <div className="app-container">
+      {/* VCPD Terminal Boot Screen (shown on first visit or tab reopening) */}
+      {showBootScreen && <TerminalBootScreen onEnter={handleBootEnter} />}
+
       {/* Optional CRT Scanlines Layer */}
       {scanlinesActive && <div className="scanlines-overlay" />}
 
@@ -936,6 +980,24 @@ export default function App() {
             }}
           >
             📻 {dispatching ? "10-99 ALERT!" : "10-99"}
+          </button>
+
+          {/* Re-boot Terminal Screen */}
+          <button
+            onClick={handleRebootTerminal}
+            title="Replay VCPD Classified Terminal Boot Animation"
+            style={{
+              padding: "8px 12px",
+              fontSize: "13px",
+              fontWeight: "700",
+              borderRadius: "6px",
+              backgroundColor: "#0f172a",
+              border: "1px solid #334155",
+              color: "#38bdf8",
+              cursor: "pointer",
+            }}
+          >
+            💻 BOOT
           </button>
         </div>
       </header>
