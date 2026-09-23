@@ -131,25 +131,70 @@ export function playShutterSound() {
   }
 }
 
-// Police Radio Dispatch Beep
-export function playDispatchSound() {
+// Police Radio Dispatch Beep (Authentic VCPD Walkie-Talkie Squelch + 10-99 Dual Chime)
+export async function playDispatchSound() {
   try {
     const ctx = getAudioContext();
     if (!ctx) return;
+    if (ctx.state === 'suspended') {
+      await ctx.resume();
+    }
 
-    [880, 1174].forEach((freq, i) => {
+    const startTime = ctx.currentTime;
+
+    // 1. Initial Radio Mic Click / Squelch burst
+    const noiseBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.05), ctx.sampleRate);
+    const noiseData = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < noiseData.length; i++) {
+      noiseData[i] = (Math.random() * 2 - 1) * 0.15;
+    }
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'bandpass';
+    noiseFilter.frequency.value = 2400;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.12, startTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.05);
+    noiseSource.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noiseSource.start(startTime);
+
+    // 2. High-Priority Dual Police Tone Chime (10-99 Alert: 920Hz -> 1250Hz)
+    const tones = [920, 1250];
+    tones.forEach((freq, i) => {
+      const toneStart = startTime + 0.05 + i * 0.11;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
+
       osc.type = 'sine';
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.06, ctx.currentTime + i * 0.07);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (i + 1) * 0.07);
+      osc.frequency.setValueAtTime(freq, toneStart);
+
+      gain.gain.setValueAtTime(0.22, toneStart);
+      gain.gain.exponentialRampToValueAtTime(0.001, toneStart + 0.10);
+
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.start(ctx.currentTime + i * 0.07);
-      osc.stop(ctx.currentTime + (i + 1) * 0.07);
+
+      osc.start(toneStart);
+      osc.stop(toneStart + 0.10);
     });
-  } catch {}
+
+    // 3. Ending Radio Release Chirp
+    const endSquelchTime = startTime + 0.28;
+    const endNoise = ctx.createBufferSource();
+    endNoise.buffer = noiseBuffer;
+    const endGain = ctx.createGain();
+    endGain.gain.setValueAtTime(0.08, endSquelchTime);
+    endGain.gain.exponentialRampToValueAtTime(0.001, endSquelchTime + 0.04);
+    endNoise.connect(noiseFilter);
+    noiseFilter.connect(endGain);
+    endGain.connect(ctx.destination);
+    endNoise.start(endSquelchTime);
+  } catch (err) {
+    console.warn("[VCPD Audio] playDispatchSound error:", err);
+  }
 }
 
 // 80s Vice Synthwave Ambient Loop Generator

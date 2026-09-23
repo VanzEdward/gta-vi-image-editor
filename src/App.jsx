@@ -152,7 +152,10 @@ export default function App() {
 
   // Audio & Visual Effects - Default to ON with user persistence
   const [musicPlaying, setMusicPlaying] = useState(() => localStorage.getItem("vcpd_music") !== "false");
+  const [audioStarted, setAudioStarted] = useState(false);
+  const [starSyncKey, setStarSyncKey] = useState(0);
   const [scanlinesActive, setScanlinesActive] = useState(() => localStorage.getItem("vcpd_crt") !== "false");
+  const [dispatching, setDispatching] = useState(false);
   const [currentTime, setCurrentTime] = useState("");
 
   // Auto-start Vice FM synthwave music on first user interaction (browser autoplay policy requirement)
@@ -161,6 +164,7 @@ export default function App() {
       const startAudioOnFirstGesture = () => {
         toggleSynthwaveMusic((playing) => {
           setMusicPlaying(playing);
+          setAudioStarted(playing);
         });
       };
 
@@ -306,6 +310,7 @@ export default function App() {
   // Wanted Star Rating Click
   const handleStarClick = (rating) => {
     playStarSound(rating);
+    setStarSyncKey((k) => k + 1);
     const bountyScale = [10000, 50000, 150000, 500000, 1000000];
     const threatLevels = [
       "PETTY CITATION / VEHICULAR TRAFFIC",
@@ -364,6 +369,7 @@ export default function App() {
     playClickSound();
     toggleSynthwaveMusic((playing) => {
       setMusicPlaying(playing);
+      setAudioStarted(playing);
       localStorage.setItem("vcpd_music", playing ? "true" : "false");
     });
   };
@@ -376,6 +382,14 @@ export default function App() {
       localStorage.setItem("vcpd_crt", next ? "true" : "false");
       return next;
     });
+  };
+
+  // Radio Dispatch Tone (10-99 Alert)
+  const handleDispatchClick = () => {
+    setDispatching(true);
+    playDispatchSound();
+    showToast("📻 VCPD DISPATCH: Code 10-99 priority alert broadcasted!");
+    setTimeout(() => setDispatching(false), 850);
   };
 
   // Render Wanted Poster on Canvas
@@ -863,6 +877,11 @@ export default function App() {
           {/* Synthwave Radio Toggle */}
           <button
             onClick={handleToggleMusic}
+            title={
+              musicPlaying
+                ? (audioStarted ? "Vice FM Synthwave Radio is playing" : "Click anywhere to enable audio (Browser Autoplay Policy)")
+                : "Turn on Vice FM Radio"
+            }
             style={{
               padding: "8px 14px",
               fontSize: "13px",
@@ -874,7 +893,11 @@ export default function App() {
               cursor: "pointer",
             }}
           >
-            <span>{musicPlaying ? "🔊 VICE FM (ON)" : "🔈 VICE FM"}</span>
+            <span>
+              {musicPlaying
+                ? (audioStarted ? "🔊 VICE FM (ON)" : "🔊 VICE FM (TAP TO PLAY)")
+                : "🔈 VICE FM"}
+            </span>
           </button>
 
           {/* CRT Scanline Toggle */}
@@ -896,20 +919,23 @@ export default function App() {
 
           {/* Radio Dispatch Cue (10-99 Police Code for Wanted Suspect Alert) */}
           <button
-            onClick={() => playDispatchSound()}
+            onClick={handleDispatchClick}
             title="10-99 Police Ten-Code: High-Priority Wanted Suspect Dispatch Alert"
             style={{
               padding: "8px 12px",
               fontSize: "13px",
               fontWeight: "700",
               borderRadius: "6px",
-              backgroundColor: "#0f172a",
-              border: "1px solid #334155",
+              backgroundColor: dispatching ? "rgba(251, 191, 36, 0.25)" : "#0f172a",
+              border: `1px solid ${dispatching ? "#fbbf24" : "#334155"}`,
               color: "#fbbf24",
+              boxShadow: dispatching ? "0 0 16px rgba(251, 191, 36, 0.6)" : "none",
+              transform: dispatching ? "scale(1.05)" : "scale(1)",
+              transition: "all 0.15s ease",
               cursor: "pointer",
             }}
           >
-            📻 10-99
+            📻 {dispatching ? "10-99 ALERT!" : "10-99"}
           </button>
         </div>
       </header>
@@ -1099,12 +1125,12 @@ export default function App() {
             <label className="hud-font" style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
               WANTED LEVEL (CLICK STARS TO ESCALATE THREAT):
             </label>
-            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            <div key={`stars-row-${suspect.stars}-${starSyncKey}`} style={{ display: "flex", gap: "6px", alignItems: "center" }}>
               {[1, 2, 3, 4, 5].map((star) => {
                 const isActive = star <= suspect.stars;
                 return (
                   <button
-                    key={star}
+                    key={`star-${star}-${starSyncKey}`}
                     onClick={() => handleStarClick(star)}
                     className={isActive ? "star-active" : ""}
                     style={{
