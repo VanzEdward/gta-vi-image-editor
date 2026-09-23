@@ -139,6 +139,7 @@ export default function App() {
   const [currentImage, setCurrentImage] = useState(suspect.url);
   const [editorKey, setEditorKey] = useState(0);
   const [finalPosterUrl, setFinalPosterUrl] = useState(null);
+  const [composedSuspect, setComposedSuspect] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
@@ -177,6 +178,7 @@ export default function App() {
     setCurrentImage(preset.url);
     setEditorKey((k) => k + 1);
     setFinalPosterUrl(null);
+    setComposedSuspect(null);
   };
 
   // Custom Suspect Upload
@@ -195,6 +197,7 @@ export default function App() {
           bookingNo: `VCPD-2026-${Math.floor(1000 + Math.random() * 9000)}X`,
         }));
         setFinalPosterUrl(null);
+        setComposedSuspect(null);
         showToast("Custom photo loaded into editor!");
       };
       reader.readAsDataURL(file);
@@ -213,12 +216,21 @@ export default function App() {
       "NOOSE & MILITARY AUTHORIZED - SHOOT ON SIGHT",
     ];
 
-    setSuspect((prev) => ({
-      ...prev,
+    const updatedSuspect = {
+      ...suspect,
       stars: rating,
       bounty: bountyScale[rating - 1],
       dangerLevel: threatLevels[rating - 1],
-    }));
+    };
+
+    setSuspect(updatedSuspect);
+
+    // If poster is already generated, live-update stars and bounty on the poster canvas immediately
+    if (finalPosterUrl) {
+      const editorCanvasUrl = editorRef.current?.editor?.getImage();
+      const imageToUse = editorCanvasUrl || currentImage;
+      renderPosterCanvas(imageToUse, updatedSuspect, false);
+    }
   };
 
   // Randomize Rap Sheet generator
@@ -229,14 +241,23 @@ export default function App() {
     const randomAlias = RANDOM_ALIASES[Math.floor(Math.random() * RANDOM_ALIASES.length)];
     const randomBounty = Math.floor(Math.random() * 9 + 1) * 100000 + 50000;
 
-    setSuspect((prev) => ({
-      ...prev,
+    const updatedSuspect = {
+      ...suspect,
       alias: randomAlias,
       charge: randomCrime,
       location: randomLoc,
       bounty: randomBounty,
-    }));
+    };
+
+    setSuspect(updatedSuspect);
     showToast("🎲 Generated new random crime dossier!");
+
+    // If a poster is already composed, live-update the actual wanted poster canvas with the new crime!
+    if (finalPosterUrl) {
+      const editorCanvasUrl = editorRef.current?.editor?.getImage();
+      const imageToUse = editorCanvasUrl || currentImage;
+      renderPosterCanvas(imageToUse, updatedSuspect, false);
+    }
   };
 
   // Synthesizer Radio Toggle
@@ -248,10 +269,11 @@ export default function App() {
   };
 
   // Render Wanted Poster on Canvas
-  const renderPosterCanvas = useCallback((sourceImageUrl) => {
+  const renderPosterCanvas = useCallback((sourceImageUrl, targetSuspect = suspect, shouldScroll = true) => {
     setIsGenerating(true);
     const canvas = posterCanvasRef.current || document.createElement("canvas");
     const ctx = canvas.getContext("2d");
+    const activeSuspect = targetSuspect || suspect;
 
     // HD 1000 x 1400 Ratio
     canvas.width = 1000;
@@ -288,7 +310,7 @@ export default function App() {
 
       ctx.fillStyle = "#38bdf8";
       ctx.font = "600 14px 'Chakra Petch', monospace";
-      ctx.fillText(`VCPD CENTRAL DISPATCH • DOCKET: ${suspect.bookingNo} • STATUS: ACTIVE WARRANT`, 500, 96);
+      ctx.fillText(`VCPD CENTRAL DISPATCH • DOCKET: ${activeSuspect.bookingNo} • STATUS: ACTIVE WARRANT`, 500, 96);
 
       // 3. Main Title
       ctx.fillStyle = "#ff007a";
@@ -298,7 +320,7 @@ export default function App() {
       // 4. Stars Banner
       ctx.fillStyle = "#fbbf24";
       ctx.font = "38px sans-serif";
-      const starsDisplay = "★".repeat(suspect.stars) + "☆".repeat(5 - suspect.stars);
+      const starsDisplay = "★".repeat(activeSuspect.stars) + "☆".repeat(5 - activeSuspect.stars);
       ctx.fillText(starsDisplay, 500, 242);
 
       // 5. Suspect Photo Container with Height Ruler
@@ -360,12 +382,12 @@ export default function App() {
       // Suspect Name
       ctx.fillStyle = "#ffffff";
       ctx.font = "900 44px 'Outfit', sans-serif";
-      ctx.fillText(suspect.name.toUpperCase(), 500, 835);
+      ctx.fillText(activeSuspect.name.toUpperCase(), 500, 835);
 
       // Alias
       ctx.fillStyle = "#38bdf8";
       ctx.font = "bold 22px 'Chakra Petch', monospace";
-      ctx.fillText(`AKA: "${suspect.alias.toUpperCase()}"`, 500, 875);
+      ctx.fillText(`AKA: "${activeSuspect.alias.toUpperCase()}"`, 500, 875);
 
       // Divider Line
       ctx.strokeStyle = "rgba(255, 0, 122, 0.4)";
@@ -388,7 +410,7 @@ export default function App() {
 
       ctx.fillStyle = "#ffffff";
       ctx.font = "900 48px 'Outfit', sans-serif";
-      ctx.fillText(`$${suspect.bounty.toLocaleString()}`, 500, 1008);
+      ctx.fillText(`$${activeSuspect.bounty.toLocaleString()}`, 500, 1008);
 
       // Rap Sheet Details Grid
       const gridY = 1060;
@@ -401,7 +423,7 @@ export default function App() {
 
       ctx.fillStyle = "#f8fafc";
       ctx.font = "600 20px 'Outfit', sans-serif";
-      ctx.fillText(suspect.charge, 140, gridY + 30);
+      ctx.fillText(activeSuspect.charge, 140, gridY + 30);
 
       // Location
       ctx.fillStyle = "#94a3b8";
@@ -410,7 +432,7 @@ export default function App() {
 
       ctx.fillStyle = "#00f0ff";
       ctx.font = "600 20px 'Outfit', sans-serif";
-      ctx.fillText(suspect.location, 140, gridY + 110);
+      ctx.fillText(activeSuspect.location, 140, gridY + 110);
 
       // Threat Level
       ctx.fillStyle = "#94a3b8";
@@ -419,7 +441,7 @@ export default function App() {
 
       ctx.fillStyle = "#ff007a";
       ctx.font = "bold 20px 'Chakra Petch', monospace";
-      ctx.fillText(suspect.dangerLevel, 140, gridY + 190);
+      ctx.fillText(activeSuspect.dangerLevel, 140, gridY + 190);
 
       // 8. Footer Barcode & Tip Line
       ctx.fillStyle = "rgba(15, 23, 42, 0.95)";
@@ -433,7 +455,7 @@ export default function App() {
       }
 
       ctx.font = "12px monospace";
-      ctx.fillText(suspect.bookingNo, 120, 1362);
+      ctx.fillText(activeSuspect.bookingNo, 120, 1362);
 
       ctx.textAlign = "right";
       ctx.fillStyle = "#e11d48";
@@ -446,12 +468,15 @@ export default function App() {
 
       const renderedUrl = canvas.toDataURL("image/png");
       setFinalPosterUrl(renderedUrl);
+      setComposedSuspect(activeSuspect);
       setIsGenerating(false);
 
-      // Auto-scroll to poster
-      setTimeout(() => {
-        posterSectionRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 100);
+      // Auto-scroll to poster only on initial generate
+      if (shouldScroll) {
+        setTimeout(() => {
+          posterSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 100);
+      }
     };
 
     img.src = sourceImageUrl;
@@ -462,7 +487,7 @@ export default function App() {
     playShutterSound();
     const editorCanvasUrl = editorRef.current?.editor?.getImage();
     const imageToUse = editorCanvasUrl || currentImage;
-    renderPosterCanvas(imageToUse);
+    renderPosterCanvas(imageToUse, suspect, true);
     showToast("Official VCPD Wanted Poster generated below!");
   };
 
@@ -472,7 +497,7 @@ export default function App() {
     setCurrentImage(dataUrl);
     showToast("✓ Visual edits saved! Click 'Compose Wanted Poster' to update bulletin.");
     if (finalPosterUrl) {
-      renderPosterCanvas(dataUrl);
+      renderPosterCanvas(dataUrl, composedSuspect || suspect, false);
     }
   };
 
@@ -484,7 +509,22 @@ export default function App() {
     if (editorRef.current?.editor?.reset) {
       editorRef.current.editor.reset(suspect.url);
     }
+    if (finalPosterUrl) {
+      renderPosterCanvas(suspect.url, composedSuspect || suspect, false);
+    }
     showToast("↺ Edits discarded. Photo reverted to original.");
+  };
+
+  // Fit & Center Photo inside workspace
+  const handleFitToScreen = () => {
+    playClickSound();
+    const fitBtn = document.querySelector('[title*="Fit to screen"], [aria-label*="Fit to screen"]');
+    if (fitBtn) {
+      fitBtn.click();
+    } else {
+      window.dispatchEvent(new Event("resize"));
+    }
+    showToast("⛶ Photo fitted & centered in workspace");
   };
 
   // Instant Download Action
@@ -494,9 +534,10 @@ export default function App() {
       handleComposeWantedPoster();
       return;
     }
+    const currentPosterSuspect = composedSuspect || suspect;
     const a = document.createElement("a");
     a.href = finalPosterUrl;
-    a.download = `VCPD_WANTED_${suspect.name.replace(/[^a-zA-Z0-9]/g, "_")}.png`;
+    a.download = `VCPD_WANTED_${currentPosterSuspect.name.replace(/[^a-zA-Z0-9]/g, "_")}.png`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -506,19 +547,20 @@ export default function App() {
   // Share Link / Share Card (supports Web Share API & URL Search Params)
   const handleShareLink = async () => {
     playClickSound();
+    const currentPosterSuspect = composedSuspect || suspect;
     const url = new URL(window.location.origin + window.location.pathname);
-    url.searchParams.set("preset", suspect.id);
-    url.searchParams.set("name", suspect.name);
-    url.searchParams.set("alias", suspect.alias);
-    url.searchParams.set("stars", suspect.stars);
-    url.searchParams.set("bounty", suspect.bounty);
-    url.searchParams.set("charge", suspect.charge);
-    url.searchParams.set("location", suspect.location);
-    url.searchParams.set("danger", suspect.dangerLevel);
-    url.searchParams.set("docket", suspect.bookingNo);
+    url.searchParams.set("preset", currentPosterSuspect.id);
+    url.searchParams.set("name", currentPosterSuspect.name);
+    url.searchParams.set("alias", currentPosterSuspect.alias);
+    url.searchParams.set("stars", currentPosterSuspect.stars);
+    url.searchParams.set("bounty", currentPosterSuspect.bounty);
+    url.searchParams.set("charge", currentPosterSuspect.charge);
+    url.searchParams.set("location", currentPosterSuspect.location);
+    url.searchParams.set("danger", currentPosterSuspect.dangerLevel);
+    url.searchParams.set("docket", currentPosterSuspect.bookingNo);
 
     const shareUrl = url.toString();
-    const shareText = `🚨 VCPD WANTED BULLETIN 🚨\nSUSPECT: ${suspect.name} (${suspect.alias})\nWANTED LEVEL: ${"★".repeat(suspect.stars)}\nBOUNTY: $${suspect.bounty.toLocaleString()}\nCHARGES: ${suspect.charge}\n\nBuilt with React Image Editor Challenge #BuiltWithImageEditor\n${shareUrl}`;
+    const shareText = `🚨 VCPD WANTED BULLETIN 🚨\nSUSPECT: ${currentPosterSuspect.name} (${currentPosterSuspect.alias})\nWANTED LEVEL: ${"★".repeat(currentPosterSuspect.stars)}\nBOUNTY: $${currentPosterSuspect.bounty.toLocaleString()}\nCHARGES: ${currentPosterSuspect.charge}\n\nBuilt with React Image Editor Challenge #BuiltWithImageEditor\n${shareUrl}`;
 
     if (navigator.share) {
       try {
@@ -1112,40 +1154,67 @@ export default function App() {
               </span>
             </div>
 
-            <button
-              onClick={handleEditorCancel}
-              title="Reset all edits to original photo"
-              style={{
-                padding: "4px 10px",
-                backgroundColor: "rgba(239, 68, 68, 0.15)",
-                border: "1px solid rgba(239, 68, 68, 0.4)",
-                borderRadius: "4px",
-                color: "#f87171",
-                fontSize: "11px",
-                fontWeight: "700",
-                cursor: "pointer",
-              }}
-            >
-              ↺ RESET PHOTO
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <button
+                onClick={handleFitToScreen}
+                title="Fit and center image inside workspace"
+                style={{
+                  padding: "4px 10px",
+                  backgroundColor: "rgba(0, 240, 255, 0.12)",
+                  border: "1px solid rgba(0, 240, 255, 0.4)",
+                  borderRadius: "4px",
+                  color: "var(--neon-cyan)",
+                  fontSize: "11px",
+                  fontWeight: "700",
+                  cursor: "pointer",
+                }}
+              >
+                ⛶ FIT PHOTO
+              </button>
+
+              <button
+                onClick={handleEditorCancel}
+                title="Reset all edits to original photo"
+                style={{
+                  padding: "4px 10px",
+                  backgroundColor: "rgba(239, 68, 68, 0.15)",
+                  border: "1px solid rgba(239, 68, 68, 0.4)",
+                  borderRadius: "4px",
+                  color: "#f87171",
+                  fontSize: "11px",
+                  fontWeight: "700",
+                  cursor: "pointer",
+                }}
+              >
+                ↺ RESET PHOTO
+              </button>
+            </div>
           </div>
 
           {/* The React Image Editor Container */}
           <div
-            style={{
-              height: "clamp(540px, 72vh, 760px)",
-              width: "100%",
-              borderRadius: "8px",
-              overflow: "hidden",
-              border: "2px solid rgba(255, 0, 122, 0.4)",
-              boxShadow: "0 10px 40px rgba(0,0,0,0.8)",
-              backgroundColor: "#000000",
+            className="editor-canvas-wrapper"
+            onClick={() => {
+              // Ensure canvas immediately recalculates fit if a tool subpanel was opened or closed
+              requestAnimationFrame(() => {
+                window.dispatchEvent(new Event("resize"));
+              });
             }}
           >
             <ImageEditor
               key={`${currentImage}-${editorKey}`}
               ref={editorRef}
               image={currentImage}
+              minHeight="100%"
+              style={{
+                width: "100%",
+                height: "100%",
+                flex: 1,
+                minHeight: 0,
+                maxHeight: "100%",
+                display: "flex",
+                flexDirection: "column",
+              }}
               options={{
                 theme: "dark",
                 features: {
@@ -1277,6 +1346,53 @@ export default function App() {
 
             {/* Poster Details & Summary */}
             <div style={{ maxWidth: "480px", flex: "1 1 300px" }}>
+              {/* Alert if manual edits were made above after composing */}
+              {composedSuspect && (
+                suspect.name !== composedSuspect.name ||
+                suspect.alias !== composedSuspect.alias ||
+                suspect.charge !== composedSuspect.charge ||
+                suspect.location !== composedSuspect.location ||
+                suspect.bounty !== composedSuspect.bounty ||
+                suspect.dangerLevel !== composedSuspect.dangerLevel ||
+                suspect.stars !== composedSuspect.stars
+              ) && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "10px 14px",
+                    backgroundColor: "rgba(255, 0, 122, 0.12)",
+                    border: "1px solid var(--neon-pink)",
+                    borderRadius: "6px",
+                    marginBottom: "14px",
+                    fontSize: "13px",
+                    gap: "8px",
+                  }}
+                >
+                  <span style={{ color: "#f8fafc", fontSize: "12px" }}>
+                    ⚠️ Docket edits detected above.
+                  </span>
+                  <button
+                    onClick={handleComposeWantedPoster}
+                    style={{
+                      padding: "5px 12px",
+                      backgroundColor: "var(--neon-pink)",
+                      border: "none",
+                      borderRadius: "4px",
+                      color: "#ffffff",
+                      fontWeight: "800",
+                      fontSize: "12px",
+                      cursor: "pointer",
+                      boxShadow: "0 0 10px var(--neon-pink-glow)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    ⚡ UPDATE POSTER
+                  </button>
+                </div>
+              )}
+
               <div
                 style={{
                   padding: "16px",
@@ -1287,16 +1403,16 @@ export default function App() {
                 }}
               >
                 <div style={{ color: "#fbbf24", fontWeight: "800", fontSize: "14px", marginBottom: "6px" }}>
-                  ⭐ WANTED LEVEL {suspect.stars} • REWARD: ${suspect.bounty.toLocaleString()}
+                  ⭐ WANTED LEVEL {(composedSuspect || suspect).stars} • REWARD: ${(composedSuspect || suspect).bounty.toLocaleString()}
                 </div>
                 <div style={{ color: "#ffffff", fontWeight: "800", fontSize: "18px" }}>
-                  {suspect.name} ("{suspect.alias}")
+                  {(composedSuspect || suspect).name} ("{(composedSuspect || suspect).alias}")
                 </div>
                 <div style={{ color: "#94a3b8", fontSize: "13px", marginTop: "6px" }}>
-                  {suspect.charge}
+                  {(composedSuspect || suspect).charge}
                 </div>
                 <div style={{ color: "#00f0ff", fontSize: "13px", marginTop: "4px" }}>
-                  Last Seen: {suspect.location}
+                  Last Seen: {(composedSuspect || suspect).location}
                 </div>
               </div>
 
@@ -1305,7 +1421,24 @@ export default function App() {
                 with the official VCPD booking grid, barcode, threat level, and Leonida Department of Corrections seal.
               </p>
 
-              <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "16px" }}>
+                <button
+                  onClick={handleRandomizeDocket}
+                  title="Generate a new random crime for this suspect"
+                  style={{
+                    padding: "9px 18px",
+                    backgroundColor: "#1e293b",
+                    border: "1px solid #334155",
+                    color: "#38bdf8",
+                    borderRadius: "6px",
+                    fontSize: "13px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    transition: "background-color 0.2s ease",
+                  }}
+                >
+                  🎲 Randomize Crime
+                </button>
                 <button
                   onClick={handleInstantDownload}
                   style={{
