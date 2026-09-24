@@ -3,17 +3,18 @@ import "./TerminalBootScreen.css";
 import { playTerminalKeySound, playTerminalAccessSound } from "../utils/audio";
 
 const BOOT_LOG_SEQUENCE = [
-  { time: "00:01:02", text: "INITIALIZING VCPD CENTRAL MAINFRAME KERNEL v6.24.9...", tag: "[OK]", type: "ok", delay: 550 },
-  { time: "00:01:03", text: "CONNECTING ENCRYPTED TUNNEL: LEONIDA STATE CJIS NETWORK...", tag: "[SECURE]", type: "sec", delay: 650 },
-  { time: "00:01:04", text: "CLEARANCE VERIFICATION: DETECTIVE BADGE AUTHORIZED...", tag: "[LEVEL 5]", type: "ok", delay: 550 },
-  { time: "00:01:05", text: "MOUNTING CRIMINAL DOSSIERS & LOCAL EVIDENCE CACHE...", tag: "[5 MOUNTED]", type: "sec", delay: 600 },
-  { time: "00:01:06", text: "ALLOCATING 1000x1400 HD FORENSIC CANVAS COMPOSITOR...", tag: "[ARMED]", type: "ok", delay: 600 },
-  { time: "00:01:07", text: "ACTIVE THREAT MONITOR: 10-99 HIGH PRIORITY WANTED ALERT...", tag: "[ARMED]", type: "warn", delay: 550 },
-  { time: "00:01:08", text: "ALL SYSTEMS OPERATIONAL. 100% COMPLETE. TERMINAL READY.", tag: "[READY]", type: "ok", delay: 500 },
+  { time: "00:01:02", text: "INITIALIZING VCPD CENTRAL MAINFRAME KERNEL v6.24.9...", tag: "[OK]", type: "ok", delay: 450 },
+  { time: "00:01:03", text: "CONNECTING ENCRYPTED TUNNEL: LEONIDA STATE CJIS NETWORK...", tag: "[SECURE]", type: "sec", delay: 500 },
+  { time: "00:01:04", text: "CLEARANCE VERIFICATION: DETECTIVE BADGE AUTHORIZED...", tag: "[LEVEL 5]", type: "ok", delay: 500 },
+  { time: "00:01:05", text: "MOUNTING CRIMINAL DOSSIERS & LOCAL EVIDENCE CACHE...", tag: "[5 MOUNTED]", type: "sec", delay: 500 },
+  { time: "00:01:06", text: "ALLOCATING 1000x1400 HD FORENSIC CANVAS COMPOSITOR...", tag: "[ARMED]", type: "ok", delay: 500 },
+  { time: "00:01:07", text: "ACTIVE THREAT MONITOR: 10-99 HIGH PRIORITY WANTED ALERT...", tag: "[ARMED]", type: "warn", delay: 500 },
+  { time: "00:01:08", text: "ALL SYSTEMS OPERATIONAL. 100% COMPLETE. TERMINAL READY.", tag: "[READY]", type: "ok", delay: 450 },
 ];
 
 export default function TerminalBootScreen({ onEnter }) {
   const [visibleCount, setVisibleCount] = useState(0);
+  const [progressPercent, setProgressPercent] = useState(0);
   const [isEntering, setIsEntering] = useState(false);
   const [currentTime, setCurrentTime] = useState("");
   const enteredRef = useRef(false);
@@ -47,10 +48,28 @@ export default function TerminalBootScreen({ onEnter }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Sequential typing/log effect with realistic boot pacing
+  // Independent continuous smooth loading progress (0% -> 100%)
+  useEffect(() => {
+    const TOTAL_BOOT_DURATION = 3800; // ~3.8 seconds smooth progression
+    const startTime = performance.now();
+
+    const interval = setInterval(() => {
+      const elapsed = performance.now() - startTime;
+      const pct = Math.min(100, Math.floor((elapsed / TOTAL_BOOT_DURATION) * 100));
+      setProgressPercent((prev) => (pct > prev ? pct : prev));
+
+      if (elapsed >= TOTAL_BOOT_DURATION) {
+        clearInterval(interval);
+      }
+    }, 30);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Sequential typing/log effect with realistic boot pacing (independent of progress bar)
   useEffect(() => {
     if (visibleCount < BOOT_LOG_SEQUENCE.length) {
-      const stepDelay = BOOT_LOG_SEQUENCE[visibleCount]?.delay || 550;
+      const stepDelay = BOOT_LOG_SEQUENCE[visibleCount]?.delay || 500;
       const timer = setTimeout(() => {
         setVisibleCount((prev) => {
           const next = prev + 1;
@@ -66,7 +85,7 @@ export default function TerminalBootScreen({ onEnter }) {
     }
   }, [visibleCount]);
 
-  const isBootComplete = visibleCount >= BOOT_LOG_SEQUENCE.length;
+  const isBootComplete = progressPercent >= 100 && visibleCount >= BOOT_LOG_SEQUENCE.length;
 
   // Handle entry to main app
   const handleEnter = () => {
@@ -106,11 +125,6 @@ export default function TerminalBootScreen({ onEnter }) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isBootComplete]);
-
-  const progressPercent = Math.min(
-    100,
-    Math.round((visibleCount / BOOT_LOG_SEQUENCE.length) * 100)
-  );
 
   return (
     <div
