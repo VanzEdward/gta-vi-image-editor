@@ -15,6 +15,7 @@ import {
 } from "./utils/storage";
 import TerminalBootScreen from "./components/TerminalBootScreen";
 import GtaStickerTray from "./components/GtaStickerTray";
+import { MEDIA_TEMPLATES, renderGtaMediaFormat } from "./utils/posterRenderer";
 
 const PRESET_SUSPECTS = [
   {
@@ -148,6 +149,8 @@ export default function App() {
   const [editorKey, setEditorKey] = useState(0);
   const [finalPosterUrl, setFinalPosterUrl] = useState(null);
   const [composedSuspect, setComposedSuspect] = useState(null);
+  const [selectedTemplate, setSelectedTemplate] = useState("vcpd-bulletin");
+  const [lastComposedImage, setLastComposedImage] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const [mobileTab, setMobileTab] = useState("editor"); // "editor" | "docket"
@@ -457,319 +460,55 @@ export default function App() {
     }
   };
 
-  // Render Wanted Poster on Canvas
-  const renderPosterCanvas = useCallback((sourceImageUrl, targetSuspect = suspect, shouldScroll = true) => {
-    setIsGenerating(true);
-    const canvas = posterCanvasRef.current || document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    const activeSuspect = targetSuspect || suspect;
+  // Render Chosen GTA Media Format on Canvas
+  const renderPosterCanvas = useCallback(
+    (sourceImageUrl, targetSuspect = suspect, shouldScroll = true, templateOverride = null) => {
+      setIsGenerating(true);
+      const canvas = posterCanvasRef.current || document.createElement("canvas");
+      const activeSuspect = targetSuspect || suspect;
+      const activeTemplate = templateOverride || selectedTemplate;
 
-    // HD 1000 x 1400 Ratio
-    canvas.width = 1000;
-    canvas.height = 1400;
+      renderGtaMediaFormat(activeTemplate, canvas, sourceImageUrl, activeSuspect, (renderedUrl) => {
+        setFinalPosterUrl(renderedUrl);
+        setLastComposedImage(sourceImageUrl);
+        setComposedSuspect(activeSuspect);
+        setIsGenerating(false);
 
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      // 1. Dark Background with subtle Vice gradient
-      const bgGrad = ctx.createLinearGradient(0, 0, 0, 1400);
-      bgGrad.addColorStop(0, "#090d16");
-      bgGrad.addColorStop(0.5, "#06080e");
-      bgGrad.addColorStop(1, "#020408");
-      ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, 0, 1000, 1400);
-
-      // Neon Outlines
-      ctx.strokeStyle = "#ff007a";
-      ctx.lineWidth = 6;
-      ctx.strokeRect(16, 16, 968, 1368);
-
-      ctx.strokeStyle = "#00f0ff";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(26, 26, 948, 1348);
-
-      // 2. Top Header Bar: State of Leonida
-      ctx.fillStyle = "rgba(225, 29, 72, 0.25)";
-      ctx.fillRect(28, 28, 944, 95);
-
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 20px 'Chakra Petch', monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("STATE OF LEONIDA • DEPARTMENT OF LAW ENFORCEMENT", 500, 64);
-
-      ctx.fillStyle = "#38bdf8";
-      ctx.font = "600 14px 'Chakra Petch', monospace";
-      ctx.fillText(`VCPD CENTRAL DISPATCH • DOCKET: ${activeSuspect.bookingNo} • STATUS: ACTIVE WARRANT`, 500, 96);
-
-      // 3. Main Title
-      ctx.fillStyle = "#ff007a";
-      ctx.font = "900 66px 'Outfit', sans-serif";
-      ctx.fillText("WANTED BY VCPD", 500, 192);
-
-      // 4. Stars Banner
-      ctx.fillStyle = "#fbbf24";
-      ctx.font = "38px sans-serif";
-      const starsDisplay = "★".repeat(activeSuspect.stars) + "☆".repeat(5 - activeSuspect.stars);
-      ctx.fillText(starsDisplay, 500, 242);
-
-      // 5. Suspect Photo Container (Natural Portrait Aspect Ratio Frame)
-      const pW = 480;
-      const pH = 530;
-      const pX = (1000 - pW) / 2; // 260 - centered
-      const pY = 265;
-
-      // Dark background backdrop behind photo container
-      ctx.fillStyle = "#050811";
-      ctx.fillRect(pX, pY, pW, pH);
-
-      // Flanking Police Lineup Height Grid (Wings outside the mugshot frame)
-      const heights = ["6'4\"", "6'2\"", "6'0\"", "5'10\"", "5'8\"", "5'6\"", "5'4\""];
-      ctx.lineWidth = 1;
-      heights.forEach((h, idx) => {
-        const lineY = pY + 45 + idx * 68;
-
-        // Left wing ruler
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
-        ctx.beginPath();
-        ctx.moveTo(150, lineY);
-        ctx.lineTo(pX, lineY);
-        ctx.stroke();
-
-        ctx.fillStyle = "rgba(148, 163, 184, 0.75)";
-        ctx.font = "11px 'Chakra Petch', monospace";
-        ctx.textAlign = "left";
-        ctx.fillText(h, 155, lineY - 5);
-
-        // Right wing ruler
-        ctx.beginPath();
-        ctx.moveTo(pX + pW, lineY);
-        ctx.lineTo(850, lineY);
-        ctx.stroke();
-
-        ctx.textAlign = "right";
-        ctx.fillText(h, 845, lineY - 5);
+        if (shouldScroll) {
+          setTimeout(() => {
+            posterSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+          }, 100);
+        }
       });
+    },
+    [suspect, selectedTemplate]
+  );
 
-      // Draw suspect photo with 100% aspect-ratio preservation (no squishing/stretching)
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(pX, pY, pW, pH);
-      ctx.clip();
+  // Switch GTA Media Format (re-renders active image in chosen template)
+  const handleSelectTemplate = (templateId) => {
+    playClickSound();
+    setSelectedTemplate(templateId);
+    const imageToUse = lastComposedImage || editorRef.current?.editor?.getImage() || currentImage;
+    renderPosterCanvas(imageToUse, composedSuspect || suspect, false, templateId);
+    const tpl = MEDIA_TEMPLATES.find((t) => t.id === templateId);
+    showToast(`Switched format: ${tpl ? tpl.name : templateId}`);
+  };
 
-      const imgRatio = img.width / img.height;
-      const frameRatio = pW / pH; // 480 / 530 ≈ 0.90566
-      let drawW, drawH, drawX, drawY;
-
-      if (imgRatio > frameRatio) {
-        // Image is wider than frame (landscape/square) - match height and center horizontally
-        drawH = pH;
-        drawW = pH * imgRatio;
-        drawX = pX + (pW - drawW) / 2;
-        drawY = pY;
-      } else {
-        // Image is taller than frame (e.g., 9:16 or 3:4 portrait) - match width and align with slight top bias
-        drawW = pW;
-        drawH = pW / imgRatio;
-        drawX = pX;
-        // Bias slightly upwards (0.28) so heads/faces aren't cut off when tall 9:16 images are used
-        drawY = pY + Math.min(0, (pH - drawH) * 0.28);
-      }
-
-      ctx.drawImage(img, drawX, drawY, drawW, drawH);
-
-      // Subtle inner height ruler ticks over image edges
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-      ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-      ctx.font = "11px 'Chakra Petch', monospace";
-      ctx.textAlign = "left";
-
-      heights.forEach((h, idx) => {
-        const lineY = pY + 45 + idx * 68;
-        // Left inner tick
-        ctx.beginPath();
-        ctx.moveTo(pX, lineY);
-        ctx.lineTo(pX + 35, lineY);
-        ctx.stroke();
-        ctx.fillText(h, pX + 8, lineY - 5);
-
-        // Right inner tick
-        ctx.beginPath();
-        ctx.moveTo(pX + pW - 35, lineY);
-        ctx.lineTo(pX + pW, lineY);
-        ctx.stroke();
-      });
-
-      ctx.restore();
-
-      // Photo Frame Accent (Neon Cyan)
-      ctx.strokeStyle = "#00f0ff";
-      ctx.lineWidth = 3;
-      ctx.strokeRect(pX, pY, pW, pH);
-
-      // Cyberpunk / Police Corner Accents (Neon Pink)
-      ctx.strokeStyle = "#ff007a";
-      ctx.lineWidth = 4;
-      const cSize = 22;
-      // Top-Left
-      ctx.beginPath();
-      ctx.moveTo(pX - 3, pY + cSize);
-      ctx.lineTo(pX - 3, pY - 3);
-      ctx.lineTo(pX + cSize, pY - 3);
-      ctx.stroke();
-      // Top-Right
-      ctx.beginPath();
-      ctx.moveTo(pX + pW + 3 - cSize, pY - 3);
-      ctx.lineTo(pX + pW + 3, pY - 3);
-      ctx.lineTo(pX + pW + 3, pY + cSize);
-      ctx.stroke();
-      // Bottom-Left
-      ctx.beginPath();
-      ctx.moveTo(pX - 3, pY + pH - cSize);
-      ctx.lineTo(pX - 3, pY + pH + 3);
-      ctx.lineTo(pX + cSize, pY + pH + 3);
-      ctx.stroke();
-      // Bottom-Right
-      ctx.beginPath();
-      ctx.moveTo(pX + pW + 3 - cSize, pY + pH + 3);
-      ctx.lineTo(pX + pW + 3, pY + pH + 3);
-      ctx.lineTo(pX + pW + 3, pY + pH + 3 - cSize);
-      ctx.stroke();
-
-      // 6. Angled Warning Stamp
-      ctx.save();
-      ctx.translate(pX + 115, pY + 75);
-      ctx.rotate((-18 * Math.PI) / 180);
-      ctx.strokeStyle = "#e11d48";
-      ctx.lineWidth = 4;
-      ctx.strokeRect(-110, -26, 220, 52);
-      ctx.fillStyle = "rgba(225, 29, 72, 0.32)";
-      ctx.fillRect(-110, -26, 220, 52);
-      ctx.fillStyle = "#ff4d6d";
-      ctx.font = "bold 18px 'Chakra Petch', monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("ARMED & DANGEROUS", 0, 7);
-      ctx.restore();
-
-      // 7. Suspect Dossier Details
-      ctx.textAlign = "center";
-
-      // Suspect Name
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "900 44px 'Outfit', sans-serif";
-      ctx.fillText(activeSuspect.name.toUpperCase(), 500, 835);
-
-      // Alias
-      ctx.fillStyle = "#38bdf8";
-      ctx.font = "bold 22px 'Chakra Petch', monospace";
-      ctx.fillText(`AKA: "${activeSuspect.alias.toUpperCase()}"`, 500, 875);
-
-      // Divider Line
-      ctx.strokeStyle = "rgba(255, 0, 122, 0.4)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(140, 900);
-      ctx.lineTo(860, 900);
-      ctx.stroke();
-
-      // Bounty Box
-      ctx.fillStyle = "rgba(251, 191, 36, 0.12)";
-      ctx.fillRect(140, 925, 720, 100);
-      ctx.strokeStyle = "#fbbf24";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(140, 925, 720, 100);
-
-      ctx.fillStyle = "#fbbf24";
-      ctx.font = "700 18px 'Chakra Petch', monospace";
-      ctx.fillText("OFFICIAL VCPD CASH REWARD / BOUNTY", 500, 958);
-
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "900 48px 'Outfit', sans-serif";
-      ctx.fillText(`$${activeSuspect.bounty.toLocaleString()}`, 500, 1008);
-
-      // Rap Sheet Details Grid
-      const gridY = 1060;
-      ctx.textAlign = "left";
-
-      // Charges
-      ctx.fillStyle = "#94a3b8";
-      ctx.font = "700 15px 'Chakra Petch', monospace";
-      ctx.fillText("OUTSTANDING CHARGES / WARRANTS:", 140, gridY);
-
-      ctx.fillStyle = "#f8fafc";
-      ctx.font = "600 20px 'Outfit', sans-serif";
-      ctx.fillText(activeSuspect.charge, 140, gridY + 30);
-
-      // Location
-      ctx.fillStyle = "#94a3b8";
-      ctx.font = "700 15px 'Chakra Petch', monospace";
-      ctx.fillText("LAST KNOWN SIGHTING / JURISDICTION:", 140, gridY + 80);
-
-      ctx.fillStyle = "#00f0ff";
-      ctx.font = "600 20px 'Outfit', sans-serif";
-      ctx.fillText(activeSuspect.location, 140, gridY + 110);
-
-      // Threat Level
-      ctx.fillStyle = "#94a3b8";
-      ctx.font = "700 15px 'Chakra Petch', monospace";
-      ctx.fillText("THREAT LEVEL ASSESSMENT:", 140, gridY + 160);
-
-      ctx.fillStyle = "#ff007a";
-      ctx.font = "bold 20px 'Chakra Petch', monospace";
-      ctx.fillText(activeSuspect.dangerLevel, 140, gridY + 190);
-
-      // 8. Footer Barcode & Tip Line
-      ctx.fillStyle = "rgba(15, 23, 42, 0.95)";
-      ctx.fillRect(28, 1285, 944, 85);
-
-      // Mock Barcode
-      ctx.fillStyle = "#ffffff";
-      for (let i = 0; i < 60; i++) {
-        const barW = i % 3 === 0 ? 5 : i % 2 === 0 ? 3 : 1;
-        ctx.fillRect(80 + i * 5, 1305, barW, 45);
-      }
-
-      ctx.font = "12px monospace";
-      ctx.fillText(activeSuspect.bookingNo, 120, 1362);
-
-      ctx.textAlign = "right";
-      ctx.fillStyle = "#e11d48";
-      ctx.font = "bold 15px 'Chakra Petch', monospace";
-      ctx.fillText("DO NOT ATTEMPT APPREHENSION • SUSPECT IS ARMED", 940, 1320);
-
-      ctx.fillStyle = "#94a3b8";
-      ctx.font = "13px 'Chakra Petch', monospace";
-      ctx.fillText("REPORT SIGHTINGS TO VCPD DISPATCH (1-800-VICE-PD)", 940, 1345);
-
-      const renderedUrl = canvas.toDataURL("image/png");
-      setFinalPosterUrl(renderedUrl);
-      setComposedSuspect(activeSuspect);
-      setIsGenerating(false);
-
-      // Auto-scroll to poster only on initial generate
-      if (shouldScroll) {
-        setTimeout(() => {
-          posterSectionRef.current?.scrollIntoView({ behavior: "smooth" });
-        }, 100);
-      }
-    };
-
-    img.src = sourceImageUrl;
-  }, [suspect]);
-
-  // Primary Action: Compose Wanted Poster (Uses current canvas or current image)
+  // Primary Action: Compose Wanted Poster / Media Graphic
   const handleComposeWantedPoster = () => {
     playShutterSound();
     const editorCanvasUrl = editorRef.current?.editor?.getImage();
     const imageToUse = editorCanvasUrl || currentImage;
-    renderPosterCanvas(imageToUse, suspect, true);
-    showToast("Official VCPD Wanted Poster generated below!");
+    renderPosterCanvas(imageToUse, suspect, true, selectedTemplate);
+    const tpl = MEDIA_TEMPLATES.find((t) => t.id === selectedTemplate);
+    showToast(`${tpl ? tpl.name : "Graphic"} generated below!`);
   };
 
   // On Save from Unlayer Image Editor: Saves edits to current profile photo
   const handleEditorSave = ({ dataUrl }) => {
     playClickSound();
     setCurrentImage(dataUrl);
-    showToast("✓ Visual edits saved! Click 'Compose Wanted Poster' to update bulletin.");
+    showToast("✓ Visual edits saved! Click 'Compose' to update graphic.");
     if (finalPosterUrl) {
       renderPosterCanvas(dataUrl, composedSuspect || suspect, false);
     }
@@ -809,13 +548,19 @@ export default function App() {
       return;
     }
     const currentPosterSuspect = composedSuspect || suspect;
+    const prefix =
+      selectedTemplate === "weazel-news"
+        ? "WEAZEL_NEWS_"
+        : selectedTemplate === "loading-art"
+        ? "GTA_VI_LOADING_ART_"
+        : "VCPD_WANTED_";
     const a = document.createElement("a");
     a.href = finalPosterUrl;
-    a.download = `VCPD_WANTED_${currentPosterSuspect.name.replace(/[^a-zA-Z0-9]/g, "_")}.png`;
+    a.download = `${prefix}${currentPosterSuspect.name.replace(/[^a-zA-Z0-9]/g, "_")}.png`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    showToast("Downloading High-Res Wanted Poster...");
+    showToast("Downloading High-Res Graphic (.PNG)...");
   };
 
   // Share Link / Share Card (supports Web Share API & URL Search Params)
@@ -1385,6 +1130,49 @@ export default function App() {
             />
           </div>
 
+          {/* Media Output Format Selector */}
+          <div style={{ marginBottom: "14px", marginTop: "10px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+              <label className="field-label" style={{ margin: 0, fontSize: "11px" }}>
+                OUTPUT MEDIA FORMAT:
+              </label>
+              <span style={{ fontSize: "10px", color: "var(--neon-cyan)", fontFamily: "'Chakra Petch', monospace", fontWeight: "700" }}>
+                {MEDIA_TEMPLATES.find((t) => t.id === selectedTemplate)?.badge}
+              </span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
+              {MEDIA_TEMPLATES.map((tpl) => (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  onClick={() => handleSelectTemplate(tpl.id)}
+                  title={`${tpl.name} (${tpl.dimensions})`}
+                  style={{
+                    padding: "8px 4px",
+                    backgroundColor: selectedTemplate === tpl.id ? "rgba(0, 240, 255, 0.2)" : "rgba(30, 41, 59, 0.6)",
+                    border: `1px solid ${selectedTemplate === tpl.id ? "var(--neon-cyan)" : "#334155"}`,
+                    borderRadius: "5px",
+                    color: selectedTemplate === tpl.id ? "#ffffff" : "#94a3b8",
+                    fontSize: "10px",
+                    fontWeight: selectedTemplate === tpl.id ? "800" : "600",
+                    cursor: "pointer",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "2px",
+                    boxShadow: selectedTemplate === tpl.id ? "0 0 10px rgba(0, 240, 255, 0.3)" : "none",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <span style={{ fontSize: "14px" }}>{tpl.icon}</span>
+                  <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>
+                    {tpl.id === "vcpd-bulletin" ? "VCPD POSTER" : tpl.id === "weazel-news" ? "WEAZEL TV" : "GTA VI ART"}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Clear Primary Action & Fun GTA Randomizer Button */}
           <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "8px", marginTop: "4px" }}>
             <button
@@ -1403,7 +1191,7 @@ export default function App() {
                 transition: "transform 0.15s ease",
               }}
             >
-              ⚡ {isGenerating ? "COMPOSING..." : "COMPOSE WANTED POSTER"}
+              ⚡ {isGenerating ? "COMPOSING..." : "COMPOSE MEDIA GRAPHIC"}
             </button>
 
             <button
@@ -1606,7 +1394,7 @@ export default function App() {
                 disabled={isGenerating}
                 className="mobile-compose-btn"
               >
-                ⚡ {isGenerating ? "COMPOSING..." : "COMPOSE WANTED POSTER"}
+                ⚡ {isGenerating ? "COMPOSING..." : "COMPOSE MEDIA GRAPHIC"}
               </button>
               <button
                 onClick={handleRandomizeDocket}
@@ -1619,12 +1407,14 @@ export default function App() {
         </div>
       </div>
 
-      {/* ================= OFFICIAL WANTED POSTER SECTION ================= */}
+      {/* ================= OFFICIAL GTA MEDIA GRAPHIC SECTION ================= */}
       {finalPosterUrl && (
         <section ref={posterSectionRef} className="vice-panel poster-preview-card">
           <div className="poster-header-row">
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ fontSize: "22px" }}>🚨</span>
+              <span style={{ fontSize: "22px" }}>
+                {selectedTemplate === "weazel-news" ? "📺" : selectedTemplate === "loading-art" ? "🌴" : "🚨"}
+              </span>
               <h3
                 className="hud-font"
                 style={{
@@ -1635,7 +1425,11 @@ export default function App() {
                   letterSpacing: "1px",
                 }}
               >
-                Official VCPD Wanted Poster Generated
+                {selectedTemplate === "weazel-news"
+                  ? "Weazel News Live TV Broadcast Generated"
+                  : selectedTemplate === "loading-art"
+                  ? "GTA VI Official Character Splash Art Generated"
+                  : "Official VCPD Wanted Poster Generated"}
               </h3>
             </div>
 
@@ -1645,7 +1439,7 @@ export default function App() {
                 onClick={handleInstantDownload}
                 className="poster-download-btn"
               >
-                💾 DOWNLOAD POSTER (.PNG)
+                💾 DOWNLOAD GRAPHIC (.PNG)
               </button>
 
               <button
@@ -1654,6 +1448,35 @@ export default function App() {
               >
                 📤 SHARE BULLETIN LINK
               </button>
+            </div>
+          </div>
+
+          {/* Interactive GTA VI Media Format Switcher */}
+          <div className="template-switcher-wrap">
+            <div className="template-switcher-header">
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "16px" }}>⚡</span>
+                <span className="template-switcher-title">SELECT GTA VI MEDIA FORMAT</span>
+              </div>
+              <span className="template-switcher-subtitle">
+                Switch instantly between 3 authentic in-game broadcast & poster templates
+              </span>
+            </div>
+
+            <div className="template-switcher-grid">
+              {MEDIA_TEMPLATES.map((tpl) => (
+                <button
+                  key={tpl.id}
+                  onClick={() => handleSelectTemplate(tpl.id)}
+                  className={`template-pill-btn ${selectedTemplate === tpl.id ? "active" : ""}`}
+                >
+                  <span className="template-pill-icon">{tpl.icon}</span>
+                  <div className="template-pill-info">
+                    <div className="template-pill-name">{tpl.name}</div>
+                    <div className="template-pill-meta">{tpl.badge} • {tpl.dimensions}</div>
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
 
@@ -1666,11 +1489,11 @@ export default function App() {
               alignItems: "center",
             }}
           >
-            {/* The Rendered Poster Preview */}
-            <div style={{ maxWidth: "460px", width: "100%" }}>
+            {/* The Rendered Media Preview */}
+            <div style={{ maxWidth: selectedTemplate === "weazel-news" ? "580px" : "460px", width: "100%", transition: "max-width 0.3s ease" }}>
               <img
                 src={finalPosterUrl}
-                alt="Generated Official VCPD Wanted Poster"
+                alt="Generated GTA Media Graphic"
                 style={{
                   width: "100%",
                   borderRadius: "8px",
