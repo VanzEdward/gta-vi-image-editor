@@ -434,11 +434,6 @@ export default function App() {
     setCurrentImage(newImageUrl);
     setEditorKey((k) => k + 1);
 
-    // If poster is already composed, live update the canvas with the stickered photo
-    if (finalPosterUrl) {
-      renderPosterCanvas(newImageUrl, composedSuspect || suspect, false);
-    }
-
     // If custom suspect, auto-save to IndexedDB
     if (suspect.id === "custom") {
       saveCustomDossier({
@@ -448,6 +443,8 @@ export default function App() {
         composedSuspect,
       });
     }
+
+    showToast(`✓ Applied "${stickerName}" sticker! Click 'Update Graphic' to re-compose.`);
   };
 
   // Render Chosen GTA Media Format on Canvas
@@ -483,7 +480,7 @@ export default function App() {
     showToast(`Format set to ${tpl ? tpl.name : templateId}. Click Compose/Re-compose to generate!`);
   };
 
-  // Detect if suspect details or format have been edited since the graphic was composed
+  // Detect if suspect details, photo, or format have been edited since the graphic was composed
   const isDocketModified = Boolean(
     finalPosterUrl && composedSuspect && (
       suspect.name !== composedSuspect.name ||
@@ -493,7 +490,8 @@ export default function App() {
       suspect.bounty !== composedSuspect.bounty ||
       suspect.dangerLevel !== composedSuspect.dangerLevel ||
       suspect.stars !== composedSuspect.stars ||
-      selectedTemplate !== composedTemplate
+      selectedTemplate !== composedTemplate ||
+      (lastComposedImage && currentImage !== lastComposedImage)
     )
   );
 
@@ -1539,7 +1537,11 @@ export default function App() {
                   }}
                 >
                   <span style={{ color: "#f8fafc", fontSize: "12px" }}>
-                    ⚠️ {selectedTemplate !== composedTemplate ? "New media format selected in editor" : "New dossier edits made in editor"}
+                    ⚠️ {selectedTemplate !== composedTemplate
+                      ? "New media format selected in editor"
+                      : (lastComposedImage && currentImage !== lastComposedImage)
+                      ? "New sticker or photo edits applied in editor"
+                      : "New dossier edits made in editor"}
                   </span>
                   <button
                     onClick={handleComposeWantedPoster}
