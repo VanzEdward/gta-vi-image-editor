@@ -3,7 +3,7 @@
 > **Built for the [Unlayer React Image Editor Challenge](https://unlayer.com) • #BuiltWithImageEditor**  
 > An original, in-universe Grand Theft Auto VI law enforcement terminal designed for the **Vice City Police Department (VCPD)** and **Leonida Department of Corrections**.
 
-[![React](https://img.shields.io/badge/React-18.3.1-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![React](https://img.shields.io/badge/React-19.x-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Unlayer React Image Editor](https://img.shields.io/badge/Powered%20By-React%20Image%20Editor-ff007a?logo=unlayer)](https://www.npmjs.com/package/@unlayer/react-image-editor)
 [![Deployed on Render](https://img.shields.io/badge/Live%20Demo-Render-46E3B7?logo=render&logoColor=white)](https://gta-vi-image-editor.onrender.com/)
@@ -24,14 +24,14 @@
 
 ## 🎮 The Concept: An Authentic GTA VI In-Game Experience
 
-In Grand Theft Auto VI, Leonida is a sprawling playground of high-speed chases, illicit heists, and neon-lit criminal empires. **Vice City Mugshot Lab** reimagines how law enforcement dossiers and wanted bulletins operate in the GTA universe.
+In Grand Theft Auto VI, Leonida is a sprawling playground of high-speed chases, illicit heists, and neon-lit criminal empires. **Vice City Mugshot Lab** reimagines how law enforcement dossiers, broadcast media, and loading screen character splash art operate in the GTA universe.
 
 Stepping into the shoes of a VCPD Detective or wanted outlaw, users log into a classified police mainframe terminal to:
-1. **Analyze and customize criminal dossiers** (Lucia Caminos, Jason Duval, or any custom uploaded suspect).
+1. **Analyze and customize criminal dossiers** (Marco 'El Tiburon' Rivera, Roxy 'Nitro' Valentine, or any custom uploaded suspect).
 2. **Forensically manipulate suspect photos** using the core **React Image Editor** (`@unlayer/react-image-editor`).
 3. **Stamp iconic GTA decals** (WASTED, BUSTED, Aviator Shades, Cuban Gold Chains, Police Caution Tape).
 4. **Calibrate threat levels & bounties** with synchronized pulsing Wanted Stars and live police radio dispatch tones.
-5. **Generate and download official 1000x1400 HD Wanted Bulletins** complete with barcodes, dual mugshot profiles, and caution warnings.
+5. **Compositing across 3 Authentic In-Game Media Formats** (VCPD Bulletin, Weazel News Live TV Broadcast, or GTA VI Loading Screen Art).
 
 ---
 
@@ -45,13 +45,28 @@ At the center of the application is **`@unlayer/react-image-editor`**, seamlessl
 * **Text & Typography:** Overlay suspect case notes, aliases, and booking serials directly onto the canvas.
 * **Shapes & Annotations:** Frame facial recognition target boxes and forensic badges.
 * **Custom GTA Sticker Pack Integration:** A custom-built vector drawer that stamps GTA decals directly onto the image canvas and reloads the editor with undo history.
-* **Lossless Export Pipeline:** The image generated inside the React Image Editor directly feeds into the canvas compositor to create the final 1000x1400 high-definition poster.
+* **Lossless Export Pipeline:** The image generated inside the React Image Editor directly feeds into the canvas compositor engine to generate high-resolution exports across multiple formats.
 
 ---
 
 ## ✨ Key Features
 
-### 1. 🎨 Custom GTA VI Sticker Pack (12 Vector Decals)
+### 1. 📰 Multiple Authentic GTA VI Media Formats (3-in-1 Canvas Engine)
+Switch between 3 distinct in-universe media templates generated directly from your edited photo:
+* 🚨 **VCPD Wanted Bulletin (1000 × 1400 HD Poster):** Official Vice City Police Department forensic poster with dual height rulers, barcode, armed advisory, and Leonida Department of Corrections seal.
+* 📺 **Weazel News Breaking TV (1400 × 900 16:9 Widescreen):** Televised breaking news chopper feed with live telemetry readout, animated optical targeting reticle, breaking news lower-third, and live scrolling ticker banner.
+* 🌴 **GTA VI Loading Screen Art (1000 × 1400 Poster):** Signature Miami Vice sunset gradient splash art with iconic chromatic **VI** logo, Rockstar star watermark, dynamic alias pill, and character quote card.
+
+### 2. 🛡️ Smart Auto-Fitting Typography Engine (`drawFittedText`)
+* Built-in canvas text-measurement engine dynamically calculates available layout width and auto-scales font sizes.
+* Automatically guarantees zero text overlaps (e.g. suspect name and bounty never collide) and smoothly truncates with ellipses if minimum thresholds are reached.
+* Real-time HUD input length limit counters (`{current}/{max}`) with color warnings on all dossier fields.
+
+### 3. 🔒 Locked Snapshot & Manual Re-Compose Workflow
+* Composed graphics are preserved as locked snapshots—editing photo stickers, docket fields, or switching formats will never trigger disruptive auto-renders.
+* Instead, the system alerts the user and illuminates the glowing **`[ ⚡ UPDATE COMPOSED GRAPHIC ]`** button, giving the creator complete control over when to re-render.
+
+### 4. 🎨 Custom GTA VI Sticker Pack (12 Vector Decals)
 Integrated directly above the photo editor with category filtering (`STAMPS`, `PROPS`, `POLICE`, `EFFECTS`):
 * 💥 **WASTED** — Distressed red GTA death stamp with dark drop shadow.
 * 🚨 **BUSTED** — Electric blue VCPD custody stamp.
@@ -67,7 +82,7 @@ Integrated directly above the photo editor with category filtering (`STAMPS`, `P
 * ⭐ **5-STAR WANTED** — Golden maximum threat level badge.
 * *Includes `↺ UNDO` history stack to step backwards through applied stickers.*
 
-### 2. 🖥️ VCPD Classified Terminal Boot Animation
+### 5. 🖥️ VCPD Classified Terminal Boot Animation
 * Authentic retro CRT terminal with phosphor scanlines, live Leonida EDT clock, and animated terminal logs:
   ```text
   > INITIALIZING VCPD CENTRAL MAINFRAME KERNEL v6.24.9... [OK]
@@ -80,29 +95,25 @@ Integrated directly above the photo editor with category filtering (`STAMPS`, `P
 * **Timed Button Reveal:** The glowing **`[ ⚡ ACCESS SUSPECT DATABASE & LAUNCH LAB ▶ ]`** button only appears once the system hits 100% complete.
 * **Session Persistence:** Powered by `sessionStorage`—once entered, refreshing your browser skips straight into the workspace so work is never interrupted. Shows again upon opening a new tab.
 
-### 3. ⭐ 100% Synchronized Wanted Level Stars
+### 6. ⭐ 100% Synchronized Wanted Level Stars
 * Escalating 1 to 5 star threat rating with dynamic bounty scaling ($10,000 to $1,000,000) and legal jeopardy descriptions.
 * **Synchronized Heartbeat Pulse:** All active stars beat and pulse in 100% lockstep unison, mimicking authentic Grand Theft Auto game HUDs.
 
-### 4. 🎵 100% Native Web Audio API Sound Engine (Zero Audio Files Needed)
+### 7. 🎵 100% Native Web Audio API Sound Engine (Zero Audio Files Needed)
 * **VICE FM Synthwave Radio:** Real-time synthesized 80s synthwave arpeggios (Am - F - C - G) generated in code.
 * **Radio Dispatch (10-99 Alert):** High-priority dual police chime with authentic walkie-talkie mic squelch.
 * **Camera Shutter Flash:** Mechanical shutter snap sound when composing posters.
 * **Terminal Cyber Chimes:** Ascending frequency tones when authorizing terminal access.
 * **Autoplay Resilient:** Seamlessly unlocks on the boot screen button click with dynamic `(TAP TO PLAY)` status cues.
 
-### 5. 📜 Official 1000x1400 HD Wanted Poster Canvas Engine
-* High-resolution canvas renderer with aspect-ratio preservation (`object-fit: cover` math to ensure user photos never stretch or compress).
-* Features diagonal caution tape, dual mugshot profiles (profile + portrait), VCPD watermark shield, official barcode, and emergency tip line warnings.
-
-### 6. 💾 Offline IndexedDB Session Persistence
+### 8. 💾 Offline IndexedDB Session Persistence
 * Custom uploaded suspect photos, docket edits, and generated posters automatically persist across browser reloads via IndexedDB.
 
-### 7. 📱 Mobile-First Responsive HUD
+### 9. 📱 Mobile-First Responsive HUD
 * Seamless responsive design featuring tabs to switch between the **Forensic Photo Editor** and **Rap Sheet Docket** on smaller screens.
 * Vertically centered terminal boot screen tailored for mobile devices.
 
-### 8. 🔗 Shareable Bulletin Links
+### 10. 🔗 Shareable Bulletin Links
 * Generates shareable URL query parameters (`?preset=...&name=...&bounty=...&stars=...`) allowing users to share custom criminal bulletins with friends.
 
 ---
@@ -184,7 +195,7 @@ This repository includes a pre-configured **`render.yaml`** file for 1-click dep
 gta-editor/
 ├── public/
 │   ├── favicon.svg              # Custom GTA VI VCPD neon tab icon & PWA asset
-│   ├── images/                  # Preset suspect mugshots (Lucia, Jason)
+│   ├── images/                  # Preset suspect mugshots (Marco, Roxy)
 │   └── test_poster.html         # Canvas standalone test harness
 ├── src/
 │   ├── components/
@@ -195,6 +206,7 @@ gta-editor/
 │   ├── utils/
 │   │   ├── audio.js             # Native Web Audio API synthesizer (Vice FM, 10-99)
 │   │   ├── gtaStickers.js       # 12 custom GTA SVG sticker definitions & canvas stamper
+│   │   ├── posterRenderer.js    # Canvas compositor engine (3 media formats & drawFittedText)
 │   │   └── storage.js           # IndexedDB offline session storage utilities
 │   ├── App.jsx                  # Main application orchestrator & canvas compositor
 │   ├── App.css                  # Layout styles
@@ -210,8 +222,8 @@ gta-editor/
 
 ## 🛠️ Tech Stack
 
-* **Frontend Framework:** [React 18](https://react.dev/)
-* **Build Tool:** [Vite 6](https://vitejs.dev/)
+* **Frontend Framework:** [React 19](https://react.dev/)
+* **Build Tool:** [Vite 8](https://vitejs.dev/)
 * **Core Image Editor:** [@unlayer/react-image-editor](https://www.npmjs.com/package/@unlayer/react-image-editor)
 * **Audio Synthesis:** Native Web Audio API (`AudioContext`, `OscillatorNode`, `BiquadFilterNode`)
 * **Vector Graphics:** Custom inline SVGs & HTML5 2D Canvas Compositor
