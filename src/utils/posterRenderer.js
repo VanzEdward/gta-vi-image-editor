@@ -34,6 +34,59 @@ export const MEDIA_TEMPLATES = [
 ];
 
 /**
+ * Draws text fitted within a maximum width by automatically scaling down font size,
+ * and truncating with ellipsis if minimum font size is reached.
+ */
+function drawFittedText(
+  ctx,
+  text,
+  x,
+  y,
+  maxW,
+  baseFontSize,
+  fontFamily,
+  fontWeight = "normal",
+  textAlign = "left",
+  minFontSize = 13
+) {
+  if (!text) return;
+  ctx.save();
+  ctx.textAlign = textAlign;
+  ctx.textBaseline = "alphabetic";
+
+  let fontSize = baseFontSize;
+  ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+  let textWidth = ctx.measureText(text).width;
+
+  while (textWidth > maxW && fontSize > minFontSize) {
+    fontSize -= 1;
+    ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+    textWidth = ctx.measureText(text).width;
+  }
+
+  let displayText = text;
+  if (textWidth > maxW) {
+    let low = 0;
+    let high = text.length;
+    let best = text;
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2);
+      const candidate = text.substring(0, mid) + "...";
+      if (ctx.measureText(candidate).width <= maxW) {
+        best = candidate;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+    displayText = best;
+  }
+
+  ctx.fillText(displayText, x, y);
+  ctx.restore();
+}
+
+/**
  * 1. Official VCPD Wanted Bulletin Renderer (1000 x 1400)
  */
 export function renderVcpdBulletin(ctx, canvas, img, activeSuspect) {
@@ -214,14 +267,11 @@ export function renderVcpdBulletin(ctx, canvas, img, activeSuspect) {
   ctx.restore();
 
   // 7. Suspect Dossier Details
-  ctx.textAlign = "center";
   ctx.fillStyle = "#ffffff";
-  ctx.font = "900 44px 'Outfit', sans-serif";
-  ctx.fillText(activeSuspect.name.toUpperCase(), 500, 835);
+  drawFittedText(ctx, activeSuspect.name.toUpperCase(), 500, 835, 740, 44, "'Outfit', sans-serif", "900", "center", 20);
 
   ctx.fillStyle = "#38bdf8";
-  ctx.font = "bold 22px 'Chakra Petch', monospace";
-  ctx.fillText(`AKA: "${activeSuspect.alias.toUpperCase()}"`, 500, 875);
+  drawFittedText(ctx, `AKA: "${activeSuspect.alias.toUpperCase()}"`, 500, 875, 740, 22, "'Chakra Petch', monospace", "bold", "center", 14);
 
   ctx.strokeStyle = "rgba(255, 0, 122, 0.4)";
   ctx.lineWidth = 2;
@@ -239,11 +289,11 @@ export function renderVcpdBulletin(ctx, canvas, img, activeSuspect) {
 
   ctx.fillStyle = "#fbbf24";
   ctx.font = "700 18px 'Chakra Petch', monospace";
+  ctx.textAlign = "center";
   ctx.fillText("OFFICIAL VCPD CASH REWARD / BOUNTY", 500, 958);
 
   ctx.fillStyle = "#ffffff";
-  ctx.font = "900 48px 'Outfit', sans-serif";
-  ctx.fillText(`$${activeSuspect.bounty.toLocaleString()}`, 500, 1008);
+  drawFittedText(ctx, `$${activeSuspect.bounty.toLocaleString()}`, 500, 1008, 680, 48, "'Outfit', sans-serif", "900", "center", 26);
 
   // Rap Sheet Details Grid
   const gridY = 1060;
@@ -254,24 +304,21 @@ export function renderVcpdBulletin(ctx, canvas, img, activeSuspect) {
   ctx.fillText("OUTSTANDING CHARGES / WARRANTS:", 140, gridY);
 
   ctx.fillStyle = "#f8fafc";
-  ctx.font = "600 20px 'Outfit', sans-serif";
-  ctx.fillText(activeSuspect.charge, 140, gridY + 30);
+  drawFittedText(ctx, activeSuspect.charge, 140, gridY + 30, 720, 20, "'Outfit', sans-serif", "600", "left", 14);
 
   ctx.fillStyle = "#94a3b8";
   ctx.font = "700 15px 'Chakra Petch', monospace";
   ctx.fillText("LAST KNOWN SIGHTING / JURISDICTION:", 140, gridY + 80);
 
   ctx.fillStyle = "#00f0ff";
-  ctx.font = "600 20px 'Outfit', sans-serif";
-  ctx.fillText(activeSuspect.location, 140, gridY + 110);
+  drawFittedText(ctx, activeSuspect.location, 140, gridY + 110, 720, 20, "'Outfit', sans-serif", "600", "left", 14);
 
   ctx.fillStyle = "#94a3b8";
   ctx.font = "700 15px 'Chakra Petch', monospace";
   ctx.fillText("THREAT LEVEL ASSESSMENT:", 140, gridY + 160);
 
   ctx.fillStyle = "#ff007a";
-  ctx.font = "bold 20px 'Chakra Petch', monospace";
-  ctx.fillText(activeSuspect.dangerLevel, 140, gridY + 190);
+  drawFittedText(ctx, activeSuspect.dangerLevel, 140, gridY + 190, 720, 20, "'Chakra Petch', monospace", "bold", "left", 14);
 
   // 8. Footer Barcode & Tip Line
   ctx.fillStyle = "rgba(15, 23, 42, 0.95)";
@@ -408,10 +455,8 @@ export function renderWeazelNews(ctx, canvas, img, activeSuspect) {
 
   // Target Label
   ctx.fillStyle = "#00f0ff";
-  ctx.font = "bold 13px 'Chakra Petch', monospace";
-  ctx.textAlign = "left";
-  ctx.fillText(`[ TARGET LOCK: ${activeSuspect.name.toUpperCase()} ]`, bx + 10, by - 8);
-  ctx.fillText(`[ THREAT: ${"★".repeat(activeSuspect.stars)} // SIGHTED: ${activeSuspect.location.toUpperCase()} ]`, bx + 10, by + bh + 22);
+  drawFittedText(ctx, `[ TARGET LOCK: ${activeSuspect.name.toUpperCase()} ]`, bx + 10, by - 8, bw - 20, 13, "'Chakra Petch', monospace", "bold", "left", 10);
+  drawFittedText(ctx, `[ THREAT: ${"★".repeat(activeSuspect.stars)} // SIGHTED: ${activeSuspect.location.toUpperCase()} ]`, bx + 10, by + bh + 22, bw - 20, 13, "'Chakra Petch', monospace", "bold", "left", 10);
 
   // 4. Left Flank: Camera Flight Telemetry
   ctx.fillStyle = "rgba(10, 15, 30, 0.85)";
@@ -473,29 +518,25 @@ export function renderWeazelNews(ctx, canvas, img, activeSuspect) {
   ctx.font = "12px 'Chakra Petch', monospace";
   ctx.fillText("SUSPECT:", 1130, 110);
   ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 16px 'Outfit', sans-serif";
-  ctx.fillText(activeSuspect.name, 1130, 134);
+  drawFittedText(ctx, activeSuspect.name, 1130, 134, 220, 16, "'Outfit', sans-serif", "bold", "left", 12);
 
   ctx.fillStyle = "#94a3b8";
   ctx.font = "12px 'Chakra Petch', monospace";
   ctx.fillText("KNOWN ALIAS:", 1130, 170);
   ctx.fillStyle = "#38bdf8";
-  ctx.font = "bold 15px 'Chakra Petch', monospace";
-  ctx.fillText(`"${activeSuspect.alias}"`, 1130, 194);
+  drawFittedText(ctx, `"${activeSuspect.alias}"`, 1130, 194, 220, 15, "'Chakra Petch', monospace", "bold", "left", 11);
 
   ctx.fillStyle = "#94a3b8";
   ctx.font = "12px 'Chakra Petch', monospace";
   ctx.fillText("CHARGES:", 1130, 230);
   ctx.fillStyle = "#f87171";
-  ctx.font = "bold 13px 'Outfit', sans-serif";
-  ctx.fillText(activeSuspect.charge.substring(0, 24) + "...", 1130, 254);
+  drawFittedText(ctx, activeSuspect.charge, 1130, 254, 220, 13, "'Outfit', sans-serif", "bold", "left", 11);
 
   ctx.fillStyle = "#94a3b8";
   ctx.font = "12px 'Chakra Petch', monospace";
   ctx.fillText("BOUNTY REWARD:", 1130, 290);
   ctx.fillStyle = "#fbbf24";
-  ctx.font = "900 24px 'Outfit', sans-serif";
-  ctx.fillText(`$${activeSuspect.bounty.toLocaleString()}`, 1130, 320);
+  drawFittedText(ctx, `$${activeSuspect.bounty.toLocaleString()}`, 1130, 320, 220, 24, "'Outfit', sans-serif", "900", "left", 16);
 
   ctx.fillStyle = "#94a3b8";
   ctx.font = "12px 'Chakra Petch', monospace";
@@ -560,22 +601,34 @@ export function renderWeazelNews(ctx, canvas, img, activeSuspect) {
   ctx.strokeRect(30, bannerY + 36, 1340, 68);
 
   ctx.fillStyle = "#ffffff";
-  ctx.font = "900 26px 'Outfit', sans-serif";
-  ctx.fillText(
+  drawFittedText(
+    ctx,
     `POLICE MANHUNT: ${activeSuspect.name.toUpperCase()} SOUGHT BY VCPD TACTICAL UNITS`,
     50,
-    bannerY + 78
+    bannerY + 78,
+    1300,
+    26,
+    "'Outfit', sans-serif",
+    "900",
+    "left",
+    16
   );
 
   // Ticker bar (Yellow with black text)
   ctx.fillStyle = "#facc15";
   ctx.fillRect(30, bannerY + 104, 1340, 34);
   ctx.fillStyle = "#000000";
-  ctx.font = "bold 13px 'Chakra Petch', monospace";
-  ctx.fillText(
+  drawFittedText(
+    ctx,
     `⚠️ VCPD BULLETIN // CHARGES: ${activeSuspect.charge.toUpperCase()} • SIGHTED: ${activeSuspect.location.toUpperCase()} • REWARD: $${activeSuspect.bounty.toLocaleString()} • REPORT SIGHTINGS TO WEAZEL TIP-LINE 1-800-WEAZEL-TIP ⚠️`,
     40,
-    bannerY + 126
+    bannerY + 126,
+    1320,
+    13,
+    "'Chakra Petch', monospace",
+    "bold",
+    "left",
+    10
   );
 }
 
@@ -712,32 +765,64 @@ export function renderLoadingScreenArt(ctx, canvas, img, activeSuspect) {
   ctx.lineWidth = 3;
   ctx.strokeRect(80, cardY, 840, 320);
 
-  // Name Title
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "900 52px 'Outfit', sans-serif";
-  ctx.textAlign = "left";
-  ctx.fillText(activeSuspect.name.toUpperCase(), 110, cardY + 65);
-
-  // Alias Pill
-  ctx.fillStyle = "rgba(0, 240, 255, 0.15)";
-  ctx.fillRect(110, cardY + 85, 340, 38);
-  ctx.strokeStyle = "#00f0ff";
-  ctx.lineWidth = 1.5;
-  ctx.strokeRect(110, cardY + 85, 340, 38);
-
-  ctx.fillStyle = "#00f0ff";
-  ctx.font = "bold 18px 'Chakra Petch', monospace";
-  ctx.fillText(`AKA: "${activeSuspect.alias.toUpperCase()}"`, 125, cardY + 110);
-
   // Bounty & Wanted Rating (Right Aligned on Card)
+  ctx.save();
   ctx.textAlign = "right";
   ctx.fillStyle = "#fbbf24";
   ctx.font = "900 40px 'Outfit', sans-serif";
-  ctx.fillText(`$${activeSuspect.bounty.toLocaleString()}`, 890, cardY + 68);
+  const bountyStr = `$${activeSuspect.bounty.toLocaleString()}`;
+  const bountyW = ctx.measureText(bountyStr).width;
+  ctx.fillText(bountyStr, 890, cardY + 68);
 
   ctx.fillStyle = "#fbbf24";
   ctx.font = "26px sans-serif";
   ctx.fillText("★".repeat(activeSuspect.stars) + "☆".repeat(5 - activeSuspect.stars), 890, cardY + 105);
+  ctx.restore();
+
+  // Name Title (Left Aligned on Card, with space reserved before Bounty)
+  const maxNameW = Math.max(340, 890 - bountyW - 25 - 110);
+  ctx.fillStyle = "#ffffff";
+  drawFittedText(
+    ctx,
+    activeSuspect.name.toUpperCase(),
+    110,
+    cardY + 65,
+    maxNameW,
+    48,
+    "'Outfit', sans-serif",
+    "900",
+    "left",
+    22
+  );
+
+  // Alias Pill (Auto-sizes to text, never crosses right rating)
+  const aliasText = `AKA: "${activeSuspect.alias.toUpperCase()}"`;
+  ctx.save();
+  ctx.font = "bold 16px 'Chakra Petch', monospace";
+  const rawAliasW = ctx.measureText(aliasText).width;
+  const maxPillW = Math.min(520, 890 - 150 - 110);
+  const pillW = Math.min(maxPillW, Math.max(160, rawAliasW + 28));
+
+  ctx.fillStyle = "rgba(0, 240, 255, 0.15)";
+  ctx.fillRect(110, cardY + 85, pillW, 36);
+  ctx.strokeStyle = "#00f0ff";
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(110, cardY + 85, pillW, 36);
+
+  ctx.fillStyle = "#00f0ff";
+  drawFittedText(
+    ctx,
+    aliasText,
+    124,
+    cardY + 109,
+    pillW - 20,
+    16,
+    "'Chakra Petch', monospace",
+    "bold",
+    "left",
+    11
+  );
+  ctx.restore();
 
   // Divider
   ctx.strokeStyle = "rgba(148, 163, 184, 0.25)";
@@ -748,6 +833,7 @@ export function renderLoadingScreenArt(ctx, canvas, img, activeSuspect) {
   ctx.stroke();
 
   // Character Lore Quote
+  ctx.save();
   ctx.textAlign = "left";
   ctx.fillStyle = "#ffcc00";
   ctx.font = "italic 700 20px 'Outfit', sans-serif";
@@ -755,16 +841,14 @@ export function renderLoadingScreenArt(ctx, canvas, img, activeSuspect) {
 
   // Rap Sheet Synopsis
   ctx.fillStyle = "#cbd5e1";
-  ctx.font = "600 16px 'Chakra Petch', monospace";
-  ctx.fillText(`CRIME: ${activeSuspect.charge}`, 110, cardY + 225);
+  drawFittedText(ctx, `CRIME: ${activeSuspect.charge}`, 110, cardY + 225, 780, 16, "'Chakra Petch', monospace", "600", "left", 13);
 
   ctx.fillStyle = "#38bdf8";
-  ctx.font = "600 16px 'Chakra Petch', monospace";
-  ctx.fillText(`TURF / SIGHTING: ${activeSuspect.location}`, 110, cardY + 258);
+  drawFittedText(ctx, `TURF / SIGHTING: ${activeSuspect.location}`, 110, cardY + 258, 780, 16, "'Chakra Petch', monospace", "600", "left", 13);
 
   ctx.fillStyle = "#e11d48";
-  ctx.font = "bold 15px 'Chakra Petch', monospace";
-  ctx.fillText(`THREAT ASSESSMENT: ${activeSuspect.dangerLevel}`, 110, cardY + 290);
+  drawFittedText(ctx, `THREAT ASSESSMENT: ${activeSuspect.dangerLevel}`, 110, cardY + 290, 780, 15, "'Chakra Petch', monospace", "bold", "left", 12);
+  ctx.restore();
 
   // 6. Bottom Loading Screen Status
   ctx.fillStyle = "rgba(10, 15, 25, 0.9)";

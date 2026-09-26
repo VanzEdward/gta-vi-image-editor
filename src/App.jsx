@@ -988,13 +988,20 @@ export default function App() {
 
           {/* Suspect Name Input */}
           <div>
-            <label className="hud-font" style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
-              SUSPECT NAME:
-            </label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+              <label className="hud-font" style={{ fontSize: "11px", color: "#94a3b8" }}>
+                SUSPECT NAME:
+              </label>
+              <span style={{ fontSize: "10px", color: (suspect.name || "").length >= 26 ? "#ff4d6d" : "#64748b", fontFamily: "'Chakra Petch', monospace" }}>
+                {(suspect.name || "").length}/26
+              </span>
+            </div>
             <input
               type="text"
+              maxLength={26}
               value={suspect.name}
-              onChange={(e) => setSuspect({ ...suspect, name: e.target.value })}
+              onChange={(e) => setSuspect({ ...suspect, name: e.target.value.slice(0, 26) })}
+              placeholder="e.g. MARCO 'EL TIBURON' RIVERA"
               style={{
                 width: "100%",
                 padding: "10px 12px",
@@ -1011,13 +1018,20 @@ export default function App() {
 
           {/* Suspect Alias Input */}
           <div>
-            <label className="hud-font" style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
-              ALIAS / MONIKER:
-            </label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+              <label className="hud-font" style={{ fontSize: "11px", color: "#94a3b8" }}>
+                ALIAS / MONIKER:
+              </label>
+              <span style={{ fontSize: "10px", color: (suspect.alias || "").length >= 24 ? "#ff4d6d" : "#64748b", fontFamily: "'Chakra Petch', monospace" }}>
+                {(suspect.alias || "").length}/24
+              </span>
+            </div>
             <input
               type="text"
+              maxLength={24}
               value={suspect.alias}
-              onChange={(e) => setSuspect({ ...suspect, alias: e.target.value })}
+              onChange={(e) => setSuspect({ ...suspect, alias: e.target.value.slice(0, 24) })}
+              placeholder="e.g. THE HARBOR PHANTOM"
               style={{
                 width: "100%",
                 padding: "10px 12px",
@@ -1034,14 +1048,24 @@ export default function App() {
 
           {/* Bounty Reward */}
           <div>
-            <label className="hud-font" style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
-              BOUNTY / CASH REWARD ($ USD):
-            </label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+              <label className="hud-font" style={{ fontSize: "11px", color: "#94a3b8" }}>
+                BOUNTY / CASH REWARD ($ USD):
+              </label>
+              <span style={{ fontSize: "10px", color: "#64748b", fontFamily: "'Chakra Petch', monospace" }}>
+                MAX $99M
+              </span>
+            </div>
             <input
               type="number"
+              min="0"
+              max="99999999"
               step="50000"
               value={suspect.bounty}
-              onChange={(e) => setSuspect({ ...suspect, bounty: Number(e.target.value) || 0 })}
+              onChange={(e) => {
+                const val = Math.min(99999999, Math.max(0, Number(e.target.value) || 0));
+                setSuspect({ ...suspect, bounty: val });
+              }}
               style={{
                 width: "100%",
                 padding: "10px 12px",
@@ -1058,13 +1082,20 @@ export default function App() {
 
           {/* Primary Charge */}
           <div>
-            <label className="hud-font" style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
-              PRIMARY OFFENSE:
-            </label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+              <label className="hud-font" style={{ fontSize: "11px", color: "#94a3b8" }}>
+                PRIMARY OFFENSE:
+              </label>
+              <span style={{ fontSize: "10px", color: (suspect.charge || "").length >= 55 ? "#ff4d6d" : "#64748b", fontFamily: "'Chakra Petch', monospace" }}>
+                {(suspect.charge || "").length}/55
+              </span>
+            </div>
             <input
               type="text"
+              maxLength={55}
               value={suspect.charge}
-              onChange={(e) => setSuspect({ ...suspect, charge: e.target.value })}
+              onChange={(e) => setSuspect({ ...suspect, charge: e.target.value.slice(0, 55) })}
+              placeholder="e.g. Contraband Smuggling & Speedboat Evading"
               style={{
                 width: "100%",
                 padding: "10px 12px",
@@ -1080,13 +1111,20 @@ export default function App() {
 
           {/* Last Seen Location */}
           <div>
-            <label className="hud-font" style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
-              LAST SIGHTED LOCATION:
-            </label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+              <label className="hud-font" style={{ fontSize: "11px", color: "#94a3b8" }}>
+                LAST SIGHTED LOCATION:
+              </label>
+              <span style={{ fontSize: "10px", color: (suspect.location || "").length >= 35 ? "#ff4d6d" : "#64748b", fontFamily: "'Chakra Petch', monospace" }}>
+                {(suspect.location || "").length}/35
+              </span>
+            </div>
             <input
               type="text"
+              maxLength={35}
               value={suspect.location}
-              onChange={(e) => setSuspect({ ...suspect, location: e.target.value })}
+              onChange={(e) => setSuspect({ ...suspect, location: e.target.value.slice(0, 35) })}
+              placeholder="e.g. Vice Port Pier 4"
               style={{
                 width: "100%",
                 padding: "10px 12px",
@@ -1102,13 +1140,20 @@ export default function App() {
 
           {/* Threat Warning */}
           <div>
-            <label className="hud-font" style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
-              THREAT ASSESSMENT:
-            </label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+              <label className="hud-font" style={{ fontSize: "11px", color: "#94a3b8" }}>
+                THREAT ASSESSMENT:
+              </label>
+              <span style={{ fontSize: "10px", color: (suspect.dangerLevel || "").length >= 45 ? "#ff4d6d" : "#64748b", fontFamily: "'Chakra Petch', monospace" }}>
+                {(suspect.dangerLevel || "").length}/45
+              </span>
+            </div>
             <input
               type="text"
+              maxLength={45}
               value={suspect.dangerLevel}
-              onChange={(e) => setSuspect({ ...suspect, dangerLevel: e.target.value })}
+              onChange={(e) => setSuspect({ ...suspect, dangerLevel: e.target.value.slice(0, 45) })}
+              placeholder="e.g. FLIGHT RISK / WEAPON POSSESSION"
               style={{
                 width: "100%",
                 padding: "10px 12px",
@@ -1551,7 +1596,7 @@ export default function App() {
                 <div style={{ color: "#fbbf24", fontWeight: "800", fontSize: "14px", marginBottom: "6px" }}>
                   ⭐ WANTED LEVEL {(composedSuspect || suspect).stars} • REWARD: ${(composedSuspect || suspect).bounty.toLocaleString()}
                 </div>
-                <div style={{ color: "#ffffff", fontWeight: "800", fontSize: "18px" }}>
+                <div style={{ color: "#ffffff", fontWeight: "800", fontSize: "18px", wordBreak: "break-word" }}>
                   {(composedSuspect || suspect).name} ("{(composedSuspect || suspect).alias}")
                 </div>
                 <div style={{ color: "#94a3b8", fontSize: "13px", marginTop: "6px" }}>
