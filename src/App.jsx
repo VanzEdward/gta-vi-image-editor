@@ -1520,49 +1520,6 @@ export default function App() {
 
             {/* Poster Details & Summary */}
             <div style={{ maxWidth: "480px", flex: "1 1 300px" }}>
-              {/* Alert if manual edits were made above after composing */}
-              {isDocketModified && (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "10px 14px",
-                    backgroundColor: "rgba(255, 0, 122, 0.12)",
-                    border: "1px solid var(--neon-pink)",
-                    borderRadius: "6px",
-                    marginBottom: "14px",
-                    fontSize: "13px",
-                    gap: "8px",
-                  }}
-                >
-                  <span style={{ color: "#f8fafc", fontSize: "12px" }}>
-                    ⚠️ {selectedTemplate !== composedTemplate
-                      ? "New media format selected in editor"
-                      : (lastComposedImage && currentImage !== lastComposedImage)
-                      ? "New sticker or photo edits applied in editor"
-                      : "New dossier edits made in editor"}
-                  </span>
-                  <button
-                    onClick={handleComposeWantedPoster}
-                    style={{
-                      padding: "6px 14px",
-                      backgroundColor: "var(--neon-pink)",
-                      border: "none",
-                      borderRadius: "4px",
-                      color: "#ffffff",
-                      fontWeight: "800",
-                      fontSize: "12px",
-                      cursor: "pointer",
-                      boxShadow: "0 0 12px var(--neon-pink-glow)",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    ⚡ UPDATE GRAPHIC
-                  </button>
-                </div>
-              )}
-
               <div
                 style={{
                   padding: "16px",
