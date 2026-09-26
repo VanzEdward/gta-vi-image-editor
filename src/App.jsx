@@ -346,13 +346,6 @@ export default function App() {
     };
 
     setSuspect(updatedSuspect);
-
-    // If poster is already generated, live-update stars and bounty on the poster canvas immediately
-    if (finalPosterUrl) {
-      const editorCanvasUrl = editorRef.current?.editor?.getImage();
-      const imageToUse = editorCanvasUrl || currentImage;
-      renderPosterCanvas(imageToUse, updatedSuspect, false);
-    }
   };
 
   // Randomize Rap Sheet generator
@@ -372,14 +365,7 @@ export default function App() {
     };
 
     setSuspect(updatedSuspect);
-    showToast("🎲 Generated new random crime dossier!");
-
-    // If a poster is already composed, live-update the actual wanted poster canvas with the new crime!
-    if (finalPosterUrl) {
-      const editorCanvasUrl = editorRef.current?.editor?.getImage();
-      const imageToUse = editorCanvasUrl || currentImage;
-      renderPosterCanvas(imageToUse, updatedSuspect, false);
-    }
+    showToast("🎲 Generated new random crime dossier! Click 'Compose' to update poster.");
   };
 
   // Synthesizer Radio Toggle with Persistence
@@ -494,6 +480,19 @@ export default function App() {
     showToast(`Switched format: ${tpl ? tpl.name : templateId}`);
   };
 
+  // Detect if suspect details have been edited since the graphic was composed
+  const isDocketModified = Boolean(
+    finalPosterUrl && composedSuspect && (
+      suspect.name !== composedSuspect.name ||
+      suspect.alias !== composedSuspect.alias ||
+      suspect.charge !== composedSuspect.charge ||
+      suspect.location !== composedSuspect.location ||
+      suspect.bounty !== composedSuspect.bounty ||
+      suspect.dangerLevel !== composedSuspect.dangerLevel ||
+      suspect.stars !== composedSuspect.stars
+    )
+  );
+
   // Primary Action: Compose Wanted Poster / Media Graphic
   const handleComposeWantedPoster = () => {
     playShutterSound();
@@ -509,9 +508,6 @@ export default function App() {
     playClickSound();
     setCurrentImage(dataUrl);
     showToast("✓ Visual edits saved! Click 'Compose' to update graphic.");
-    if (finalPosterUrl) {
-      renderPosterCanvas(dataUrl, composedSuspect || suspect, false);
-    }
   };
 
   // On Cancel from Unlayer Image Editor: Genuinely reverts back to original unedited photo
@@ -521,9 +517,6 @@ export default function App() {
     setEditorKey((k) => k + 1);
     if (editorRef.current?.editor?.reset) {
       editorRef.current.editor.reset(suspect.url);
-    }
-    if (finalPosterUrl) {
-      renderPosterCanvas(suspect.url, composedSuspect || suspect, false);
     }
     showToast("↺ Edits discarded. Photo reverted to original.");
   };
@@ -1180,18 +1173,18 @@ export default function App() {
               disabled={isGenerating}
               style={{
                 padding: "12px",
-                backgroundColor: "var(--neon-pink)",
-                border: "none",
+                backgroundColor: isDocketModified ? "var(--neon-pink)" : finalPosterUrl ? "#1e293b" : "var(--neon-pink)",
+                border: isDocketModified ? "2px solid #00f0ff" : finalPosterUrl ? "1px solid #334155" : "none",
                 borderRadius: "6px",
                 color: "#ffffff",
                 fontSize: "13px",
                 fontWeight: "800",
                 cursor: "pointer",
-                boxShadow: "0 0 14px var(--neon-pink-glow)",
-                transition: "transform 0.15s ease",
+                boxShadow: isDocketModified ? "0 0 16px rgba(0, 240, 255, 0.6)" : "0 0 14px var(--neon-pink-glow)",
+                transition: "all 0.15s ease",
               }}
             >
-              ⚡ {isGenerating ? "COMPOSING..." : "COMPOSE MEDIA GRAPHIC"}
+              ⚡ {isGenerating ? "COMPOSING..." : isDocketModified ? "UPDATE COMPOSED GRAPHIC" : finalPosterUrl ? "RE-COMPOSE GRAPHIC" : "COMPOSE MEDIA GRAPHIC"}
             </button>
 
             <button
@@ -1393,8 +1386,9 @@ export default function App() {
                 onClick={handleComposeWantedPoster}
                 disabled={isGenerating}
                 className="mobile-compose-btn"
+                style={isDocketModified ? { border: "2px solid #00f0ff", boxShadow: "0 0 16px rgba(0, 240, 255, 0.6)" } : {}}
               >
-                ⚡ {isGenerating ? "COMPOSING..." : "COMPOSE MEDIA GRAPHIC"}
+                ⚡ {isGenerating ? "COMPOSING..." : isDocketModified ? "UPDATE COMPOSED GRAPHIC" : finalPosterUrl ? "RE-COMPOSE GRAPHIC" : "COMPOSE MEDIA GRAPHIC"}
               </button>
               <button
                 onClick={handleRandomizeDocket}
@@ -1507,15 +1501,7 @@ export default function App() {
             {/* Poster Details & Summary */}
             <div style={{ maxWidth: "480px", flex: "1 1 300px" }}>
               {/* Alert if manual edits were made above after composing */}
-              {composedSuspect && (
-                suspect.name !== composedSuspect.name ||
-                suspect.alias !== composedSuspect.alias ||
-                suspect.charge !== composedSuspect.charge ||
-                suspect.location !== composedSuspect.location ||
-                suspect.bounty !== composedSuspect.bounty ||
-                suspect.dangerLevel !== composedSuspect.dangerLevel ||
-                suspect.stars !== composedSuspect.stars
-              ) && (
+              {isDocketModified && (
                 <div
                   style={{
                     display: "flex",
@@ -1531,12 +1517,12 @@ export default function App() {
                   }}
                 >
                   <span style={{ color: "#f8fafc", fontSize: "12px" }}>
-                    ⚠️ Docket edits detected above.
+                    ⚠️ New dossier edits made above (Name, Stars, Bounty, etc.)
                   </span>
                   <button
                     onClick={handleComposeWantedPoster}
                     style={{
-                      padding: "5px 12px",
+                      padding: "6px 14px",
                       backgroundColor: "var(--neon-pink)",
                       border: "none",
                       borderRadius: "4px",
@@ -1544,11 +1530,11 @@ export default function App() {
                       fontWeight: "800",
                       fontSize: "12px",
                       cursor: "pointer",
-                      boxShadow: "0 0 10px var(--neon-pink-glow)",
+                      boxShadow: "0 0 12px var(--neon-pink-glow)",
                       whiteSpace: "nowrap",
                     }}
                   >
-                    ⚡ UPDATE POSTER
+                    ⚡ UPDATE GRAPHIC
                   </button>
                 </div>
               )}
