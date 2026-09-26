@@ -150,6 +150,7 @@ export default function App() {
   const [finalPosterUrl, setFinalPosterUrl] = useState(null);
   const [composedSuspect, setComposedSuspect] = useState(null);
   const [selectedTemplate, setSelectedTemplate] = useState("vcpd-bulletin");
+  const [composedTemplate, setComposedTemplate] = useState("vcpd-bulletin");
   const [lastComposedImage, setLastComposedImage] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
@@ -271,6 +272,7 @@ export default function App() {
     setEditorKey((k) => k + 1);
     setFinalPosterUrl(null);
     setComposedSuspect(null);
+    setComposedTemplate("vcpd-bulletin");
     localStorage.setItem("vcpd_active_tab_type", preset.id);
   };
 
@@ -283,6 +285,7 @@ export default function App() {
     setEditorKey((k) => k + 1);
     setFinalPosterUrl(savedCustom.finalPosterUrl || null);
     setComposedSuspect(savedCustom.composedSuspect || null);
+    setComposedTemplate(savedCustom.composedTemplate || "vcpd-bulletin");
     localStorage.setItem("vcpd_active_tab_type", "custom");
     showToast("Loaded your saved custom suspect!");
   };
@@ -311,7 +314,8 @@ export default function App() {
         setSuspect(uploadedSuspect);
         setFinalPosterUrl(null);
         setComposedSuspect(null);
-        setSavedCustom({ suspect: uploadedSuspect, currentImage: reader.result });
+        setComposedTemplate("vcpd-bulletin");
+        setSavedCustom({ suspect: uploadedSuspect, currentImage: reader.result, composedTemplate: "vcpd-bulletin" });
         localStorage.setItem("vcpd_active_tab_type", "custom");
         saveCustomDossier({
           suspect: uploadedSuspect,
@@ -458,6 +462,7 @@ export default function App() {
         setFinalPosterUrl(renderedUrl);
         setLastComposedImage(sourceImageUrl);
         setComposedSuspect(activeSuspect);
+        setComposedTemplate(activeTemplate);
         setIsGenerating(false);
 
         if (shouldScroll) {
@@ -470,17 +475,15 @@ export default function App() {
     [suspect, selectedTemplate]
   );
 
-  // Switch GTA Media Format (re-renders active image in chosen template)
+  // Switch GTA Media Format (does NOT auto-compose; sets selected template so user can click Compose/Re-compose)
   const handleSelectTemplate = (templateId) => {
     playClickSound();
     setSelectedTemplate(templateId);
-    const imageToUse = lastComposedImage || editorRef.current?.editor?.getImage() || currentImage;
-    renderPosterCanvas(imageToUse, composedSuspect || suspect, false, templateId);
     const tpl = MEDIA_TEMPLATES.find((t) => t.id === templateId);
-    showToast(`Switched format: ${tpl ? tpl.name : templateId}`);
+    showToast(`Format set to ${tpl ? tpl.name : templateId}. Click Compose/Re-compose to generate!`);
   };
 
-  // Detect if suspect details have been edited since the graphic was composed
+  // Detect if suspect details or format have been edited since the graphic was composed
   const isDocketModified = Boolean(
     finalPosterUrl && composedSuspect && (
       suspect.name !== composedSuspect.name ||
@@ -489,7 +492,8 @@ export default function App() {
       suspect.location !== composedSuspect.location ||
       suspect.bounty !== composedSuspect.bounty ||
       suspect.dangerLevel !== composedSuspect.dangerLevel ||
-      suspect.stars !== composedSuspect.stars
+      suspect.stars !== composedSuspect.stars ||
+      selectedTemplate !== composedTemplate
     )
   );
 
@@ -541,10 +545,11 @@ export default function App() {
       return;
     }
     const currentPosterSuspect = composedSuspect || suspect;
+    const activeTpl = composedTemplate || selectedTemplate;
     const prefix =
-      selectedTemplate === "weazel-news"
+      activeTpl === "weazel-news"
         ? "WEAZEL_NEWS_"
-        : selectedTemplate === "loading-art"
+        : activeTpl === "loading-art"
         ? "GTA_VI_LOADING_ART_"
         : "VCPD_WANTED_";
     const a = document.createElement("a");
@@ -1452,7 +1457,7 @@ export default function App() {
           <div className="poster-header-row">
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <span style={{ fontSize: "22px" }}>
-                {selectedTemplate === "weazel-news" ? "📺" : selectedTemplate === "loading-art" ? "🌴" : "🚨"}
+                {(composedTemplate || selectedTemplate) === "weazel-news" ? "📺" : (composedTemplate || selectedTemplate) === "loading-art" ? "🌴" : "🚨"}
               </span>
               <h3
                 className="hud-font"
@@ -1464,9 +1469,9 @@ export default function App() {
                   letterSpacing: "1px",
                 }}
               >
-                {selectedTemplate === "weazel-news"
+                {(composedTemplate || selectedTemplate) === "weazel-news"
                   ? "Weazel News Live TV Broadcast Generated"
-                  : selectedTemplate === "loading-art"
+                  : (composedTemplate || selectedTemplate) === "loading-art"
                   ? "GTA VI Official Character Splash Art Generated"
                   : "Official VCPD Wanted Poster Generated"}
               </h3>
@@ -1490,35 +1495,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Interactive GTA VI Media Format Switcher */}
-          <div className="template-switcher-wrap">
-            <div className="template-switcher-header">
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "16px" }}>⚡</span>
-                <span className="template-switcher-title">SELECT GTA VI MEDIA FORMAT</span>
-              </div>
-              <span className="template-switcher-subtitle">
-                Switch instantly between 3 authentic in-game broadcast & poster templates
-              </span>
-            </div>
-
-            <div className="template-switcher-grid">
-              {MEDIA_TEMPLATES.map((tpl) => (
-                <button
-                  key={tpl.id}
-                  onClick={() => handleSelectTemplate(tpl.id)}
-                  className={`template-pill-btn ${selectedTemplate === tpl.id ? "active" : ""}`}
-                >
-                  <span className="template-pill-icon">{tpl.icon}</span>
-                  <div className="template-pill-info">
-                    <div className="template-pill-name">{tpl.name}</div>
-                    <div className="template-pill-meta">{tpl.badge} • {tpl.dimensions}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div
             style={{
               display: "flex",
@@ -1526,10 +1502,11 @@ export default function App() {
               gap: "28px",
               justifyContent: "center",
               alignItems: "center",
+              marginTop: "20px",
             }}
           >
             {/* The Rendered Media Preview */}
-            <div style={{ maxWidth: selectedTemplate === "weazel-news" ? "580px" : "460px", width: "100%", transition: "max-width 0.3s ease" }}>
+            <div style={{ maxWidth: (composedTemplate || selectedTemplate) === "weazel-news" ? "580px" : "460px", width: "100%", transition: "max-width 0.3s ease" }}>
               <img
                 src={finalPosterUrl}
                 alt="Generated GTA Media Graphic"
@@ -1562,7 +1539,7 @@ export default function App() {
                   }}
                 >
                   <span style={{ color: "#f8fafc", fontSize: "12px" }}>
-                    ⚠️ New dossier edits made above (Name, Stars, Bounty, etc.)
+                    ⚠️ {selectedTemplate !== composedTemplate ? "New media format selected in editor" : "New dossier edits made in editor"}
                   </span>
                   <button
                     onClick={handleComposeWantedPoster}
